@@ -2,6 +2,12 @@ import express, { Express } from "express";
 import { SampleRouter } from "./modules/sample/sample.router.js";
 import { globalError, notFoundError } from "./utils/error.js";
 import cors from "cors";
+import { SampleService } from "./modules/sample/sample.service.js";
+import { SampleController } from "./modules/sample/sample.controller.js";
+import { prisma } from "./lib/prisma.js";
+import { RegisterService } from "./modules/auth/register/register.service.js";
+import { RegisterController } from "./modules/auth/register/register.controller.js";
+import { AuthRouter } from "./modules/auth/auth.router.js";
 
 export class App {
   app: Express;
@@ -18,19 +24,38 @@ export class App {
     this.app.use(express.json());
   }
 
-  private registerModule(){
-    const sampleRouter = new SampleRouter;
+  private registerModule() {
+    // services
+    const sampleService = new SampleService(prisma);
 
+    // controllers
+    const sampleController = new SampleController(sampleService);
+
+    // routes
+    const sampleRouter = new SampleRouter(sampleController);
+
+    // Register Services
+    const registerService = new RegisterService(prisma);
+
+    // Register Controller
+    const registerController = new RegisterController(registerService);
+
+    // Auth Routes (Register, Login)
+    const authRouter = new AuthRouter(registerController);
+
+    // entry point
+    this.app.use("/api/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
   }
 
-  private errors(){
+  private errors() {
     this.app.use(globalError);
     this.app.use(notFoundError);
   }
 
   start() {
-    const PORT = process.env.PORT;
+    const PORT = Number(process.env.PORT) || 8000;
+
     this.app.listen(PORT, () => {
       console.log(`Server running on port: ${PORT}`);
     });

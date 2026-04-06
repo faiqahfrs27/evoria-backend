@@ -21,3 +21,29 @@ model Sample {
 
   @@map("samples")
 }
+
+enum Role {
+  ORGANIZER
+  USER
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar()
+  email      String    @unique
+  password   String
+  role       Role
+  profilePic String?
+  
+  referralCode  String  @unique
+  referredById  Int?
+  referredBy    User?   @relation("UserReferral", fields: [referredById], references: [id])
+  referrals     User[]  @relation("UserReferral")
+  
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+
+  @@map("users")
+}
