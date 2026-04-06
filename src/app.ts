@@ -8,6 +8,8 @@ import { prisma } from "./lib/prisma.js";
 import { RegisterService } from "./modules/auth/register/register.service.js";
 import { RegisterController } from "./modules/auth/register/register.controller.js";
 import { AuthRouter } from "./modules/auth/auth.router.js";
+import { LoginController } from "./modules/auth/login/login.controller.js";
+import { LoginService } from "./modules/auth/login/login.service.js";
 
 export class App {
   app: Express;
@@ -34,14 +36,18 @@ export class App {
     // routes
     const sampleRouter = new SampleRouter(sampleController);
 
-    // Register Services
+    // Auth Services
     const registerService = new RegisterService(prisma);
+    const loginService = new LoginService(prisma);
 
-    // Register Controller
+    // Auth Controller
     const registerController = new RegisterController(registerService);
+    const loginController = new LoginController(loginService);
+
+    
 
     // Auth Routes (Register, Login)
-    const authRouter = new AuthRouter(registerController);
+    const authRouter = new AuthRouter(registerController, loginController);
 
     // entry point
     this.app.use("/api/auth", authRouter.getRouter());
