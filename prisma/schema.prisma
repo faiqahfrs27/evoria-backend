@@ -14,10 +14,10 @@ datasource db {
 }
 
 model Sample {
-  id         Int       @id @default(autoincrement())
-  name       String    
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("samples")
 }
@@ -28,22 +28,21 @@ enum Role {
 }
 
 model User {
-  id         Int       @id @default(autoincrement())
-  name       String    @db.VarChar()
-  email      String    @unique
+  id         String  @id @default(uuid()) @db.Uuid
+  name       String  @db.VarChar()
+  email      String  @unique
   password   String
   role       Role
   profilePic String?
-  
-  referralCode  String  @unique
-  referredById  Int?
-  referredBy    User?   @relation("UserReferral", fields: [referredById], references: [id])
-  referrals     User[]  @relation("UserReferral")
-  
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
 
+  referralCode String  @unique
+  referredById String? @db.Uuid
+  referredBy   User?   @relation("UserReferral", fields: [referredById], references: [id])
+  referrals    User[]  @relation("UserReferral")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@map("users")
 }
