@@ -13,11 +13,90 @@ datasource db {
   provider = "postgresql"
 }
 
-model Sample {
-  id         Int       @id @default(autoincrement())
-  name       String    
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+enum UserRole {
+  CUSTOMER
+  ORGANIZER
+}
 
-  @@map("samples")
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELED
+  COMPLETED
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizedEvents Event[] @relation("EventOrganizer")
+
+  @@map("users")
+}
+
+model Event {
+  id          Int         @id @default(autoincrement())
+  organizerId Int
+  category    String
+  title       String
+  description String
+  city        String
+  startAt     DateTime
+  endAt       DateTime
+  status      EventStatus @default(DRAFT)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  tickets     TicketType[]
+  vouchers    EventVoucher[]
+
+
+  organizer User @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+
+  @@index([organizerId])
+  @@index([category])
+  @@index([city])
+  @@index([startAt])
+  @@map("events")
+}
+
+model TicketType {
+  id             Int      @id @default(autoincrement())
+  eventId        Int
+  name           String
+  price          Int
+  quota          Int
+  remainingQuota Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, name])
+  @@index([eventId])
+  @@map("ticket_types")
+}
+
+model EventVoucher {
+  id             Int      @id @default(autoincrement())
+  eventId        Int
+  code           String
+  discountAmount Int
+  quota          Int
+  remainingQuota Int
+  startAt        DateTime
+  endAt          DateTime
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, code])
+  @@index([eventId])
+  @@map("event_vouchers")
 }

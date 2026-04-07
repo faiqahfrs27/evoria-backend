@@ -2,6 +2,13 @@ import express, { Express } from "express";
 import { SampleRouter } from "./modules/sample/sample.router.js";
 import { globalError, notFoundError } from "./utils/error.js";
 import cors from "cors";
+import { EventService } from "./modules/event/event.service.js";
+import { EventController } from "./modules/event/event.controller.js";
+import { EventRouter } from "./modules/event/event.router.js";
+import { prisma } from "./lib/prisma.js";
+import { UserRouter } from "./modules/user/user.router.js";
+import { UserController } from "./modules/user/user.controller.js";
+import { UserService } from "./modules/user/user.service.js";
 
 export class App {
   app: Express;
@@ -18,10 +25,17 @@ export class App {
     this.app.use(express.json());
   }
 
-  private registerModule(){
-    const sampleRouter = new SampleRouter;
+  private registerModule() {
+    const userService = new UserService(prisma);
+    const userController = new UserController(userService);
+    const userRouter = new UserRouter(userController);
 
-    this.app.use("/samples", sampleRouter.getRouter());
+    const eventService = new EventService(prisma);
+    const eventController = new EventController(eventService);
+    const eventRouter = new EventRouter(eventController);
+
+    this.app.use("/users", userRouter.getRouter());
+    this.app.use("/events", eventRouter.getRouter());
   }
 
   private errors(){
