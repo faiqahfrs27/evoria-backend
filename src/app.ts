@@ -8,6 +8,7 @@ import { EventController } from "./modules/event/event.controller.js";
 import { EventRouter } from "./modules/event/event.router.js";
 import { EventService } from "./modules/event/event.service.js";
 import { globalError, notFoundError } from "./utils/error.js";
+import cookieParser from "cookie-parser";
 
 export class App {
   app: Express;
@@ -22,6 +23,7 @@ export class App {
   private configure() {
     this.app.use(cors());
     this.app.use(express.json());
+    this.app.use(cookieParser())
   }
 
   private registerModules() {
