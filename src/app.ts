@@ -1,14 +1,13 @@
-import express, { Express } from "express";
-import { SampleRouter } from "./modules/sample/sample.router.js";
-import { globalError, notFoundError } from "./utils/error.js";
 import cors from "cors";
-import { EventService } from "./modules/event/event.service.js";
+import express, { Express } from "express";
+import { prisma } from "./lib/prisma.js";
+import { SampleController } from "./modules/sample/sample.controller.js";
+import { SampleRouter } from "./modules/sample/sample.router.js";
+import { SampleService } from "./modules/sample/sample.service.js";
 import { EventController } from "./modules/event/event.controller.js";
 import { EventRouter } from "./modules/event/event.router.js";
-import { prisma } from "./lib/prisma.js";
-import { UserRouter } from "./modules/user/user.router.js";
-import { UserController } from "./modules/user/user.controller.js";
-import { UserService } from "./modules/user/user.service.js";
+import { EventService } from "./modules/event/event.service.js";
+import { globalError, notFoundError } from "./utils/error.js";
 
 export class App {
   app: Express;
@@ -16,7 +15,7 @@ export class App {
   constructor() {
     this.app = express();
     this.configure();
-    this.registerModule();
+    this.registerModules();
     this.errors();
   }
 
@@ -25,20 +24,19 @@ export class App {
     this.app.use(express.json());
   }
 
-  private registerModule() {
-    const userService = new UserService(prisma);
-    const userController = new UserController(userService);
-    const userRouter = new UserRouter(userController);
+  private registerModules() {
+    const sampleService = new SampleService(prisma);
+    const sampleController = new SampleController(sampleService);
+    const sampleRouter = new SampleRouter(sampleController);
+    this.app.use("/samples", sampleRouter.getRouter());
 
     const eventService = new EventService(prisma);
     const eventController = new EventController(eventService);
     const eventRouter = new EventRouter(eventController);
-
-    this.app.use("/users", userRouter.getRouter());
     this.app.use("/events", eventRouter.getRouter());
   }
 
-  private errors(){
+  private errors() {
     this.app.use(globalError);
     this.app.use(notFoundError);
   }
