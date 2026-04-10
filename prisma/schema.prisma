@@ -14,10 +14,55 @@ datasource db {
 }
 
 model Sample {
-  id         Int       @id @default(autoincrement())
-  name       String    
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("samples")
+}
+
+enum Role {
+  ORGANIZER
+  USER
+}
+
+model User {
+  id         String  @id @default(uuid()) @db.Uuid
+  name       String  @db.VarChar()
+  email      String  @unique
+  password   String
+  role       Role
+  profilePic String?
+
+  referralCode String @unique
+
+  //self relation
+  referredById String? @db.Uuid
+  referredBy   User?   @relation("UserReferral", fields: [referredById], references: [id])
+  referrals    User[]  @relation("UserReferral")
+
+  //referral usage relations
+  referralUsagesGiven    ReferralUsage[] @relation("Referrer")
+  referralUsagesReceived ReferralUsage[] @relation("Referred")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@map("users")
+}
+
+model ReferralUsage {
+  id             String   @id @default(uuid()) @db.Uuid
+
+  referrerId     String   @db.Uuid
+  referrer       User     @relation("Referrer", fields: [referrerId], references: [id])
+
+  referredUserId String   @unique @db.Uuid
+  referredUser   User     @relation("Referred", fields: [referredUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("referral_usages")
 }
