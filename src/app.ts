@@ -9,6 +9,11 @@ import { EventRouter } from "./modules/event/event.router.js";
 import { EventService } from "./modules/event/event.service.js";
 import { globalError, notFoundError } from "./utils/error.js";
 import cookieParser from "cookie-parser";
+import { RegisterService } from "./modules/auth/register/register.service.js";
+import { RegisterController } from "./modules/auth/register/register.controller.js";
+import { AuthRouter } from "./modules/auth/auth.router.js";
+import { LoginController } from "./modules/auth/login/login.controller.js";
+import { LoginService } from "./modules/auth/login/login.service.js";
 
 export class App {
   app: Express;
@@ -26,10 +31,31 @@ export class App {
     this.app.use(cookieParser())
   }
 
-  private registerModules() {
+  
+  private registerModule() {
+    // services
     const sampleService = new SampleService(prisma);
+
+    // controllers
     const sampleController = new SampleController(sampleService);
+
+    // routes
     const sampleRouter = new SampleRouter(sampleController);
+
+    // Auth Services
+    const registerService = new RegisterService(prisma);
+    const loginService = new LoginService(prisma);
+
+    // Auth Controller
+    const registerController = new RegisterController(registerService);
+    const loginController = new LoginController(loginService);
+
+    
+    // Auth Routes (Register, Login)
+    const authRouter = new AuthRouter(registerController, loginController);
+
+    // entry point
+    this.app.use("/api/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
 
     const eventService = new EventService(prisma);
@@ -44,7 +70,8 @@ export class App {
   }
 
   start() {
-    const PORT = process.env.PORT;
+    const PORT = Number(process.env.PORT) || 8000;
+
     this.app.listen(PORT, () => {
       console.log(`Server running on port: ${PORT}`);
     });

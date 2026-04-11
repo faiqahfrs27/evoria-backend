@@ -44,5 +44,5 @@ export class EventRouter {
   getRouter = () => {
     return this.router;
   };
-}
+
 
