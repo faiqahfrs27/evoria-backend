@@ -1,4 +1,5 @@
 import { PrismaClient, EventCategory } from "../../generated/prisma/client.js";
+import { ApiError } from "../../utils/api-error.js";
 
 interface GetEventsQuery {
   search?: string;
@@ -8,6 +9,23 @@ interface GetEventsQuery {
   limit?: number;
 }
 
+interface CreateEventBody {
+  name: string;
+  description: string;
+  category: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  price: number;
+  isFree: boolean;
+  availableSeats: number;
+  totalSeats: number;
+  imageUrl?: string;
+  ticketTypes?: { name: string; price: number; quota: number }[];
+}
+
+interface UpdateEventBody extends Partial<CreateEventBody> {}
+
 export class EventService {
   constructor(private prisma: PrismaClient) {}
 
@@ -16,7 +34,7 @@ export class EventService {
     const skip = (Number(page) - 1) * Number(limit);
 
     const where: any = {
-      startDate: { gte: new Date() }, 
+      startDate: { gte: new Date() },
     };
 
     if (search) {
@@ -79,9 +97,78 @@ export class EventService {
     });
 
     if (!event) {
-      throw { message: "Event not found", status: 404 };
+      throw new ApiError("Event not found", 404);
     }
 
     return event;
+  };
+
+  createEvent = async (organizerId: string, body: CreateEventBody) => {
+    const { ticketTypes, ...eventData } = body;
+
+    const event = await this.prisma.event.create({
+      data: {
+        ...eventData,
+        category: eventData.category as EventCategory,
+        startDate: new Date(eventData.startDate),
+        endDate: new Date(eventData.endDate),
+        price: eventData.isFree ? 0 : Number(eventData.price),
+        organizerId,
+        ticketTypes: ticketTypes
+          ? { create: ticketTypes }
+          : undefined,
+      },
+      include: { ticketTypes: true },
+    });
+
+    return event;
+  };
+
+  updateEvent = async (id: string, organizerId: string, body: UpdateEventBody) => {
+    const existing = await this.prisma.event.findUnique({ where: { id } });
+
+    if (!existing) throw new ApiError("Event not found", 404);
+    if (existing.organizerId !== organizerId) {
+      throw new ApiError("Forbidden: You don't own this event", 403);
+    }
+
+    const { ticketTypes, ...eventData } = body;
+
+    const updated = await this.prisma.event.update({
+      where: { id },
+      data: {
+        ...eventData,
+        category: eventData.category
+          ? (eventData.category as EventCategory)
+          : undefined,
+        startDate: eventData.startDate
+          ? new Date(eventData.startDate)
+          : undefined,
+        endDate: eventData.endDate
+          ? new Date(eventData.endDate)
+          : undefined,
+        price:
+          eventData.isFree !== undefined
+            ? eventData.isFree
+              ? 0
+              : Number(eventData.price)
+            : undefined,
+      },
+      include: { ticketTypes: true },
+    });
+
+    return updated;
+  };
+
+  deleteEvent = async (id: string, organizerId: string) => {
+    const existing = await this.prisma.event.findUnique({ where: { id } });
+
+    if (!existing) throw new ApiError("Event not found", 404);
+    if (existing.organizerId !== organizerId) {
+      throw new ApiError("Forbidden: You don't own this event", 403);
+    }
+
+    await this.prisma.event.delete({ where: { id } });
+    return { message: "Event deleted successfully" };
   };
 }
