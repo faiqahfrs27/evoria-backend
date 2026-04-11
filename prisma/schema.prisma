@@ -51,8 +51,6 @@ model User {
 
   events    Event[]
 
-  referralCode String @unique
-
   //self relation
   referredById String? @db.Uuid
   referredBy   User?   @relation("UserReferral", fields: [referredById], references: [id])
@@ -118,7 +116,6 @@ model Voucher {
   @@map("vouchers")
 }
 
-}
 model ReferralUsage {
   id             String   @id @default(uuid()) @db.Uuid
 
