@@ -32,17 +32,16 @@ model User {
   name       String  @db.VarChar()
   email      String  @unique
   password   String
-  role       Role
+
+  role       Role    @default(USER) // ✅ default
   profilePic String?
 
-  referralCode String @unique
+  referralCode String @unique @default(uuid()) // ✅ auto generate
 
-  //self relation
   referredById String? @db.Uuid
   referredBy   User?   @relation("UserReferral", fields: [referredById], references: [id])
   referrals    User[]  @relation("UserReferral")
 
-  //referral usage relations
   referralUsagesGiven    ReferralUsage[] @relation("Referrer")
   referralUsagesReceived ReferralUsage[] @relation("Referred")
 
