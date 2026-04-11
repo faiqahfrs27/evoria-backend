@@ -1,10 +1,14 @@
-import express, { Express } from "express";
-import { SampleRouter } from "./modules/sample/sample.router.js";
-import { globalError, notFoundError } from "./utils/error.js";
 import cors from "cors";
-import { SampleService } from "./modules/sample/sample.service.js";
-import { SampleController } from "./modules/sample/sample.controller.js";
+import express, { Express } from "express";
 import { prisma } from "./lib/prisma.js";
+import { SampleController } from "./modules/sample/sample.controller.js";
+import { SampleRouter } from "./modules/sample/sample.router.js";
+import { SampleService } from "./modules/sample/sample.service.js";
+import { EventController } from "./modules/event/event.controller.js";
+import { EventRouter } from "./modules/event/event.router.js";
+import { EventService } from "./modules/event/event.service.js";
+import { globalError, notFoundError } from "./utils/error.js";
+import cookieParser from "cookie-parser";
 import { RegisterService } from "./modules/auth/register/register.service.js";
 import { RegisterController } from "./modules/auth/register/register.controller.js";
 import { AuthRouter } from "./modules/auth/auth.router.js";
@@ -17,15 +21,17 @@ export class App {
   constructor() {
     this.app = express();
     this.configure();
-    this.registerModule();
+    this.registerModules();
     this.errors();
   }
 
   private configure() {
     this.app.use(cors());
     this.app.use(express.json());
+    this.app.use(cookieParser())
   }
 
+  
   private registerModule() {
     // services
     const sampleService = new SampleService(prisma);
@@ -45,13 +51,17 @@ export class App {
     const loginController = new LoginController(loginService);
 
     
-
     // Auth Routes (Register, Login)
     const authRouter = new AuthRouter(registerController, loginController);
 
     // entry point
     this.app.use("/api/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
+
+    const eventService = new EventService(prisma);
+    const eventController = new EventController(eventService);
+    const eventRouter = new EventRouter(eventController);
+    this.app.use("/events", eventRouter.getRouter());
   }
 
   private errors() {

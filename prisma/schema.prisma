@@ -27,21 +27,38 @@ enum Role {
   USER
 }
 
+enum EventCategory {
+  MUSIC
+  SPORTS
+  FOOD
+  ART
+  EDUCATION
+  OTHER
+  ORGANIZER
+  USER
+}
+
 model User {
   id         String  @id @default(uuid()) @db.Uuid
   name       String  @db.VarChar()
   email      String  @unique
   password   String
 
-  role       Role    @default(USER) // ✅ default
+  role       Role    @default(USER) 
   profilePic String?
 
-  referralCode String @unique @default(uuid()) // ✅ auto generate
+  referralCode String @unique @default(uuid()) 
 
+  events    Event[]
+
+  referralCode String @unique
+
+  //self relation
   referredById String? @db.Uuid
   referredBy   User?   @relation("UserReferral", fields: [referredById], references: [id])
   referrals    User[]  @relation("UserReferral")
 
+  //referral usage relations
   referralUsagesGiven    ReferralUsage[] @relation("Referrer")
   referralUsagesReceived ReferralUsage[] @relation("Referred")
 
@@ -52,6 +69,56 @@ model User {
   @@map("users")
 }
 
+model Event {
+  id             String        @id @default(uuid()) @db.Uuid
+  name           String        @db.VarChar()
+  description    String
+  category       EventCategory
+  location       String
+  startDate      DateTime
+  endDate        DateTime
+  price          Int           @default(0)
+  isFree         Boolean       @default(true)
+  availableSeats Int
+  totalSeats     Int
+  imageUrl       String?
+  organizerId    String        @db.Uuid
+  organizer      User          @relation(fields: [organizerId], references: [id])
+  ticketTypes    TicketType[]
+  vouchers       Voucher[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("events")
+}
+
+model TicketType {
+  id      String @id @default(uuid()) @db.Uuid
+  name    String @db.VarChar()
+  price   Int
+  quota   Int
+  eventId String @db.Uuid
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  @@map("ticket_types")
+}
+
+model Voucher {
+  id             String   @id @default(uuid()) @db.Uuid
+  code           String   @unique
+  discountAmount Int
+  startDate      DateTime
+  endDate        DateTime
+  quota          Int
+  usedCount      Int      @default(0)
+  eventId        String   @db.Uuid
+  event          Event    @relation(fields: [eventId], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@map("vouchers")
+}
+
+}
 model ReferralUsage {
   id             String   @id @default(uuid()) @db.Uuid
 
