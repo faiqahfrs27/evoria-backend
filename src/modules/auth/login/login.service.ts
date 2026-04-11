@@ -1,32 +1,26 @@
-import { PrismaClient } from "../../../generated/prisma/client.js";
+import { verify } from "argon2";
+import { PrismaClient, User } from "../../../generated/prisma/client.js";
 import { ApiError } from "../../../utils/api-error.js";
-import { comparePassword } from "../../../utils/hash/compare-password.js";
 
 export class LoginService {
   constructor(private prisma: PrismaClient) {}
 
-  login = async(data: {
-    email: string;
-    password: string;
-  }) => {
-    const { email, password} = data;
-
-    //1. nyari user
-    const user = await this.prisma.user.findFirst({
+  login = async(body: User) => {
+    const user = await this.prisma.user.findUnique({
         where: {
-            email,
+            email: body.email,
             deletedAt: null, //soft delete
         },
     });
 
     //2. throw error kalau password atau email tidak sesuai
     if(!user){
-        throw new ApiError("Invalid Email or Password", 401);
+        throw new ApiError("Invalid Credentials", 400);
     }
 
-    const isValid = await comparePassword(password, user.password);
+    const isPassMatch = await verify(user.password, body.password);
 
-    if(!isValid){
+    if(!isPassMatch){
         throw new ApiError("Invalid Email or Password", 401);
     }
 
