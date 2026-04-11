@@ -23,7 +23,7 @@ model Sample {
 }
 
 enum Role {
-  CUSTOMER
+  USER
   ORGANIZER
 }
 
