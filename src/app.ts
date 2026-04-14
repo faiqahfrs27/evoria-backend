@@ -1,7 +1,22 @@
-import express, { Express } from "express";
-import { SampleRouter } from "./modules/sample/sample.router.js";
-import { globalError, notFoundError } from "./utils/error.js";
 import cors from "cors";
+import express, { Express } from "express";
+import { prisma } from "./lib/prisma.js";
+import { SampleController } from "./modules/sample/sample.controller.js";
+import { SampleRouter } from "./modules/sample/sample.router.js";
+import { SampleService } from "./modules/sample/sample.service.js";
+import { EventController } from "./modules/event/event.controller.js";
+import { EventRouter } from "./modules/event/event.router.js";
+import { EventService } from "./modules/event/event.service.js";
+import { globalError, notFoundError } from "./utils/error.js";
+import cookieParser from "cookie-parser";
+import { RegisterService } from "./modules/auth/register/register.service.js";
+import { RegisterController } from "./modules/auth/register/register.controller.js";
+import { AuthRouter } from "./modules/auth/auth.router.js";
+import { LoginController } from "./modules/auth/login/login.controller.js";
+import { LoginService } from "./modules/auth/login/login.service.js";
+import "reflect-metadata";
+import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
+import { AuthMiddleware } from "./middlewares/auth.middleware.js";
 
 export class App {
   app: Express;
@@ -9,28 +24,59 @@ export class App {
   constructor() {
     this.app = express();
     this.configure();
-    this.registerModule();
+    this.registerModules();
     this.errors();
   }
 
   private configure() {
     this.app.use(cors());
     this.app.use(express.json());
+    this.app.use(cookieParser())
   }
 
-  private registerModule(){
-    const sampleRouter = new SampleRouter;
+  
+  private registerModules() {
+    // services
+    const sampleService = new SampleService(prisma);
 
+    // controllers
+    const sampleController = new SampleController(sampleService);
+
+    // routes
+    const sampleRouter = new SampleRouter(sampleController);
+
+    // Services
+    const registerService = new RegisterService(prisma);
+    const loginService = new LoginService(prisma);
+    const eventService = new EventService(prisma);
+
+    // Controller
+    const registerController = new RegisterController(registerService);
+    const loginController = new LoginController(loginService);
+    const eventController = new EventController(eventService);
+
+    // Middlewares
+    const authMidlleware = new AuthMiddleware();
+    const validationMiddleware = new ValidationMiddleware();
+
+    // Routes 
+    const authRouter = new AuthRouter(registerController, loginController, validationMiddleware);
+    const eventRouter = new EventRouter(eventController);
+
+    // entry point
+    this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
+    this.app.use("/events", eventRouter.getRouter());
   }
 
-  private errors(){
+  private errors() {
     this.app.use(globalError);
     this.app.use(notFoundError);
   }
 
   start() {
-    const PORT = process.env.PORT;
+    const PORT = Number(process.env.PORT) || 8000;
+
     this.app.listen(PORT, () => {
       console.log(`Server running on port: ${PORT}`);
     });
