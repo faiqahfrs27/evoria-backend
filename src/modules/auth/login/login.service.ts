@@ -3,11 +3,12 @@ import { PrismaClient, User } from "../../../generated/prisma/client.js";
 import { ApiError } from "../../../utils/api-error.js";
 import jwt from "jsonwebtoken";
 import { EXPIRED_7_DAY, EXPIRED_ACCESS_TOKEN_JWT, EXPIRED_REFRESH_TOKEN_JWT } from "../constants.js";
+import { LoginDTO } from "../dto/login.dto.js";
 
 export class LoginService {
   constructor(private prisma: PrismaClient) {}
 
-  login = async (body: User) => {
+  login = async (body: LoginDTO) => {
     const user = await this.prisma.user.findUnique({
       where: {
         email: body.email,
