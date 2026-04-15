@@ -1,6 +1,11 @@
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import express, { Express } from "express";
 import { prisma } from "./lib/prisma.js";
+import { AuthMiddleware } from "./middlewares/auth.middleware.js";
+import { UploadMiddleware } from "./middlewares/upload.middleware.js";
+import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
+import { CloudinaryService } from "./modules/cloudinary/cloudinary.service.js";
 import { SampleController } from "./modules/sample/sample.controller.js";
 import { SampleRouter } from "./modules/sample/sample.router.js";
 import { SampleService } from "./modules/sample/sample.service.js";
@@ -24,20 +29,22 @@ export class App {
   constructor() {
     this.app = express();
     this.configure();
-    this.registerModules();
+    this.registerModule();
     this.errors();
   }
 
   private configure() {
     this.app.use(cors());
     this.app.use(express.json());
-    this.app.use(cookieParser())
+    this.app.use(cookieParser());
   }
 
   
   private registerModules() {
     // services
+    const cloudinaryService = new CloudinaryService();
     const sampleService = new SampleService(prisma);
+    const eventService = new EventService(prisma, cloudinaryService);
 
     // controllers
     const sampleController = new SampleController(sampleService);
@@ -66,6 +73,26 @@ export class App {
     // entry point
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
+    
+
+    // Event controllers
+    const eventController = new EventController(eventService);
+
+    // middlewares
+    const authMiddleware = new AuthMiddleware();
+    const uploadMiddleware = new UploadMiddleware();
+    const validationMiddleware = new ValidationMiddleware();
+
+    // Event Routes
+    const eventRouter = new EventRouter(
+      eventController,
+      authMiddleware,
+      uploadMiddleware,
+      validationMiddleware
+    );
+
+    // entry point
+    this.app.use("/api/events", eventRouter.getRouter());
     this.app.use("/events", eventRouter.getRouter());
   }
 
