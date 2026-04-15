@@ -100,6 +100,34 @@ CREATE TABLE "refresh_tokens" (
     CONSTRAINT "refresh_tokens_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "points" (
+    "id" TEXT NOT NULL,
+    "userId" UUID NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "source" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "isExpired" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "points_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "coupons" (
+    "id" TEXT NOT NULL,
+    "userId" UUID NOT NULL,
+    "code" TEXT NOT NULL,
+    "discountPercent" INTEGER NOT NULL,
+    "source" TEXT NOT NULL,
+    "eventId" UUID,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "isUsed" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "coupons_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -117,6 +145,15 @@ CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "refresh_tokens_userId_key" ON "refresh_tokens"("userId");
+
+-- CreateIndex
+CREATE INDEX "points_userId_idx" ON "points"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "coupons_code_key" ON "coupons"("code");
+
+-- CreateIndex
+CREATE INDEX "coupons_userId_idx" ON "coupons"("userId");
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_referredById_fkey" FOREIGN KEY ("referredById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -138,3 +175,9 @@ ALTER TABLE "referral_usages" ADD CONSTRAINT "referral_usages_referredUserId_fke
 
 -- AddForeignKey
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "points" ADD CONSTRAINT "points_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "coupons" ADD CONSTRAINT "coupons_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
