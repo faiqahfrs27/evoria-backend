@@ -31,4 +31,42 @@ export class EventController {
 
     res.status(200).send(result);
   };
+  
+  createEvent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const organizerId = res.locals.user.id; 
+      const body = req.body;
+
+      const event = await this.eventService.createEvent(organizerId, body);
+      res.status(201).json({ message: "Event created successfully", data: event });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateEvent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id as string;
+      const organizerId = res.locals.user.id;
+      const body = req.body;
+
+      const event = await this.eventService.updateEvent(id, organizerId, body);
+      res.status(200).json({ message: "Event updated successfully", data: event });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteEvent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id as string;
+      const organizerId = res.locals.user.id;
+
+      const result = await this.eventService.deleteEvent(id, organizerId);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
 }

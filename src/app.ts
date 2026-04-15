@@ -13,11 +13,15 @@ import { EventController } from "./modules/event/event.controller.js";
 import { EventRouter } from "./modules/event/event.router.js";
 import { EventService } from "./modules/event/event.service.js";
 import { globalError, notFoundError } from "./utils/error.js";
+import cookieParser from "cookie-parser";
 import { RegisterService } from "./modules/auth/register/register.service.js";
 import { RegisterController } from "./modules/auth/register/register.controller.js";
 import { AuthRouter } from "./modules/auth/auth.router.js";
 import { LoginController } from "./modules/auth/login/login.controller.js";
 import { LoginService } from "./modules/auth/login/login.service.js";
+import "reflect-metadata";
+import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
+import { AuthMiddleware } from "./middlewares/auth.middleware.js";
 
 export class App {
   app: Express;
@@ -36,7 +40,7 @@ export class App {
   }
 
   
-  private registerModule() {
+  private registerModules() {
     // services
     const cloudinaryService = new CloudinaryService();
     const sampleService = new SampleService(prisma);
@@ -48,20 +52,26 @@ export class App {
     // routes
     const sampleRouter = new SampleRouter(sampleController);
 
-    // Auth Services
+    // Services
     const registerService = new RegisterService(prisma);
     const loginService = new LoginService(prisma);
+    const eventService = new EventService(prisma);
 
-    // Auth Controller
+    // Controller
     const registerController = new RegisterController(registerService);
     const loginController = new LoginController(loginService);
+    const eventController = new EventController(eventService);
 
-    
-    // Auth Routes (Register, Login)
-    const authRouter = new AuthRouter(registerController, loginController);
+    // Middlewares
+    const authMidlleware = new AuthMiddleware();
+    const validationMiddleware = new ValidationMiddleware();
+
+    // Routes 
+    const authRouter = new AuthRouter(registerController, loginController, validationMiddleware);
+    const eventRouter = new EventRouter(eventController);
 
     // entry point
-    this.app.use("/api/auth", authRouter.getRouter());
+    this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
     
 
@@ -83,6 +93,7 @@ export class App {
 
     // entry point
     this.app.use("/api/events", eventRouter.getRouter());
+    this.app.use("/events", eventRouter.getRouter());
   }
 
   private errors() {

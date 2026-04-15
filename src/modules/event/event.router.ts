@@ -4,9 +4,12 @@ import { CreateEventDTO } from "./dto/create-event.dto.js";
 import { EventController } from "./event.controller.js";
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
 import { UploadMiddleware } from "../../middlewares/upload.middleware.js";
+import { Role } from "../../generated/prisma/enums.js";
 
 export class EventRouter {
   router: Router;
+  private authMiddleware: AuthMiddleware;
+
 
   constructor(
     private eventController: EventController,
@@ -15,6 +18,7 @@ export class EventRouter {
     private validationMiddleware: ValidationMiddleware,
   ) {
     this.router = Router();
+    this.authMiddleware = new AuthMiddleware();
     this.initRoutes();
   }
 
