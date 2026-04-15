@@ -34,8 +34,6 @@ enum EventCategory {
   ART
   EDUCATION
   OTHER
-  ORGANIZER
-  USER
 }
 
 model User {
@@ -115,7 +113,7 @@ model Voucher {
 
   @@map("vouchers")
 }
-}
+
 model ReferralUsage {
   id             String   @id @default(uuid()) @db.Uuid
 
