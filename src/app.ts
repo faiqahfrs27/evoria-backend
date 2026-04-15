@@ -17,6 +17,7 @@ import { LoginService } from "./modules/auth/login/login.service.js";
 import "reflect-metadata";
 import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
 import { AuthMiddleware } from "./middlewares/auth.middleware.js";
+import { MailService } from "./modules/mail/mail.service.js";
 
 export class App {
   app: Express;
@@ -46,7 +47,8 @@ export class App {
     const sampleRouter = new SampleRouter(sampleController);
 
     // Services
-    const registerService = new RegisterService(prisma);
+    const mailService = new MailService();
+    const registerService = new RegisterService(prisma, mailService);
     const loginService = new LoginService(prisma);
     const eventService = new EventService(prisma);
 
