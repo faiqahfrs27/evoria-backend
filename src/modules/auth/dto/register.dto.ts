@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString } from "class-validator";
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
 import { Role } from "../../../generated/prisma/enums.js";
 
 export class RegisterDTO {
@@ -14,11 +14,11 @@ export class RegisterDTO {
   @IsString()
   password!: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   role?: Role;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   referralCode?: string;
 }
