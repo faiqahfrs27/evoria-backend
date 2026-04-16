@@ -5,7 +5,6 @@ import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
 import { CreateEventDTO } from "./dto/create-event.dto.js";
 
 
-
 export class EventService {
   constructor(
     private prisma: PrismaClient,
