@@ -4,22 +4,7 @@ import { generateSlug } from "../../utils/generate-slug.js";
 import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
 import { CreateEventDTO } from "./dto/create-event.dto.js";
 
-interface CreateEventBody {
-  name: string;
-  description: string;
-  category: string;
-  location: string;
-  startDate: string;
-  endDate: string;
-  price: number;
-  isFree: boolean;
-  availableSeats: number;
-  totalSeats: number;
-  imageUrl?: string;
-  ticketTypes?: { name: string; price: number; quota: number }[];
-}
 
-interface UpdateEventBody extends Partial<CreateEventBody> {}
 
 export class EventService {
   constructor(
