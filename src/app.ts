@@ -1,6 +1,11 @@
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import express, { Express } from "express";
 import { prisma } from "./lib/prisma.js";
+import { AuthMiddleware } from "./middlewares/auth.middleware.js";
+import { UploadMiddleware } from "./middlewares/upload.middleware.js";
+import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
+import { CloudinaryService } from "./modules/cloudinary/cloudinary.service.js";
 import { SampleController } from "./modules/sample/sample.controller.js";
 import { SampleRouter } from "./modules/sample/sample.router.js";
 import { SampleService } from "./modules/sample/sample.service.js";
@@ -13,6 +18,7 @@ import { RegisterController } from "./modules/auth/register/register.controller.
 import { AuthRouter } from "./modules/auth/auth.router.js";
 import { LoginController } from "./modules/auth/login/login.controller.js";
 import { LoginService } from "./modules/auth/login/login.service.js";
+import "reflect-metadata";
 
 export class App {
   app: Express;
@@ -27,9 +33,9 @@ export class App {
   private configure() {
     this.app.use(cors());
     this.app.use(express.json());
+    this.app.use(cookieParser());
   }
 
-  
   private registerModules() {
     // services
     const sampleService = new SampleService(prisma);
@@ -40,25 +46,40 @@ export class App {
     // routes
     const sampleRouter = new SampleRouter(sampleController);
 
-    // Auth Services
+    // Services
     const registerService = new RegisterService(prisma);
     const loginService = new LoginService(prisma);
+    const cloudinaryService = new CloudinaryService();
+    const eventService = new EventService(prisma, cloudinaryService);
 
-    // Auth Controller
+    // Controller
     const registerController = new RegisterController(registerService);
     const loginController = new LoginController(loginService);
+    const eventController = new EventController(eventService);
 
-    
-    // Auth Routes (Register, Login)
-    const authRouter = new AuthRouter(registerController, loginController);
+    // Middlewares
+    const authMidlleware = new AuthMiddleware();
+    const authMiddleware = new AuthMiddleware();
+    const uploadMiddleware = new UploadMiddleware();
+    const validationMiddleware = new ValidationMiddleware();
+
+    // Routes
+    const authRouter = new AuthRouter(
+      registerController,
+      loginController,
+      validationMiddleware,
+    );
+    const eventRouter = new EventRouter(
+      eventController,
+      authMiddleware,
+      uploadMiddleware,
+      validationMiddleware,
+    );
 
     // entry point
-    this.app.use("/api/auth", authRouter.getRouter());
+    this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
-
-    const eventService = new EventService(prisma);
-    const eventController = new EventController(eventService);
-    const eventRouter = new EventRouter(eventController);
+    this.app.use("/api/events", eventRouter.getRouter());
     this.app.use("/events", eventRouter.getRouter());
   }
 

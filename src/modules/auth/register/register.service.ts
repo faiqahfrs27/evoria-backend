@@ -1,78 +1,110 @@
-import { PrismaClient } from "../../../generated/prisma/client.js";
+import { hash } from "argon2";
+import { PrismaClient, Role, User } from "../../../generated/prisma/client.js";
 import { ApiError } from "../../../utils/api-error.js";
-import { hashPassword } from "../../../utils/hash/hash-password.js";
-import { generateUniqueReferral } from "../../../utils/referral/generate-unique-referral.js";
+import { RegisterDTO } from "../dto/register.dto.js";
+import { generateReferralCode } from "../../../utils/referral/generate-referral-code.js";
+import { REFERRAL_EXPIRED_MONTH } from "../constants.js";
 
 export class RegisterService {
   constructor(private prisma: PrismaClient) {}
 
-  register = async (data: {
-    name: string;
-    email: string;
-    password: string;
-    role: "USER" | "ORGANIZER";
-    referralCode?: string;
-  }) => {
-    const { name, email, password, role, referralCode } = data;
-
-    //normalized semua email ke huruf kecil dan kode referral ke huruf besar semua
-    const normalizedEmail = email.toLowerCase();
-    const normalizedCode = referralCode?.toUpperCase();
-
-    //cek apakah email sudah ada atau belum
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    //kalau email sudah terdaftar maka throw error
-    if (existingUser) {
-      throw new ApiError("Email is already registered!", 400);
-    }
-
-    //hashing password yg dipanggil dari function yg ada di file hash-password.ts
-    const hashed = await hashPassword(password);
-
-    //generate referral code untuk user baru
-    const newReferralCode = await generateUniqueReferral(this.prisma, name);
-
-    let referredById: string | null = null;
-
-    //cek kode referral user
-    if (normalizedCode) {
-      const refUser = await this.prisma.user.findUnique({
-        where: { referralCode: normalizedCode },
-      });
-
-      //throw error jika email atau password tidak diisi
-      if (!email || !password) {
-        throw new ApiError("Invalid input", 400);
-      }
-
-      //throw error kl kode referral tidak valid
-      if (!refUser) {
-        throw new ApiError("Invalid referral code", 400);
-      }
-
-      //prevent self-referral
-      if (refUser.email === normalizedEmail) {
-        throw new ApiError("Cannot use your own referral code", 400);
-      }
-
-      referredById = refUser.id;
-    }
-
-    const user = await this.prisma.user.create({
-      data: {
-        name: name.trim(), //biar tidak tersimpan dengan spasi
-        email: normalizedEmail,
-        password: hashed,
-        role,
-        referralCode: newReferralCode,
-        referredById,
+  register = async (body: RegisterDTO) => {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: body.email,
       },
     });
 
-    const { password: _, ...safeUser } = user;
-    return safeUser;
+    if (user) {
+      throw new ApiError("Email is already registered!", 400);
+    }
+
+    //role default to customer
+    const role: Role = body.role ?? Role.USER;
+
+    let referrer: User | null = null;
+    if (body.referralCode) {
+      if (role != Role.USER) {
+        throw new ApiError("Only customers can use a referral code!", 400);
+      }
+
+      referrer = await this.prisma.user.findUnique({
+        where: { referralCode: body.referralCode },
+      });
+
+      if (!referrer) {
+        throw new ApiError("Referral code not found!", 400);
+      }
+
+      if (referrer.role !== Role.USER) {
+        throw new ApiError("Referral code not found!", 400);
+      }
+
+      if (referrer.email === body.email) {
+        throw new ApiError("Can not use your own referral code!", 400);
+      }
+    }
+
+    const hashedPassword = await hash(body.password);
+
+    let referralCode: string;
+    let isUnique = false;
+    do {
+      referralCode = generateReferralCode(body.name);
+      const collision = await this.prisma.user.findUnique({
+        where: { referralCode },
+      });
+      isUnique = !collision;
+    } while (!isUnique);
+
+    const now = new Date();
+    const threeMonthsLater = new Date(now);
+    threeMonthsLater.setMonth(
+      threeMonthsLater.getMonth() + REFERRAL_EXPIRED_MONTH,
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name: body.name,
+          email: body.email,
+          password: hashedPassword,
+          role,
+          referralCode,
+          ...(referrer && {referredById: referrer.id}),
+        },
+      });
+
+      // Only run reward logic when a valid referral code was used
+      if (referrer) {
+        // New user gets a 10% discount coupon (platform-issued, any event)
+        await tx.coupon.create({
+          data: {
+            userId: newUser.id,
+            code: `WELCOME-${referralCode}`,
+            discountPercent: 10,
+            source: "REFERRAL_REWARD",
+            eventId: null,           // null = valid for ALL events
+            expiresAt: threeMonthsLater,
+            isUsed: false,
+          },
+        });
+
+         // Referrer gets 10,000 points (expires 3 months from now)
+        await tx.point.create({
+          data: {
+            userId: referrer.id,
+            amount: 10_000,
+            source: `Referral: ${newUser.name}`,
+            expiresAt: threeMonthsLater,
+            isExpired: false,
+          },
+        });
+      }
+    });
+
+    return {
+      message: "register success",
+    };
   };
 }

@@ -1,87 +1,85 @@
 import { PrismaClient, EventCategory } from "../../generated/prisma/client.js";
+import { ApiError } from "../../utils/api-error.js";
+import { generateSlug } from "../../utils/generate-slug.js";
+import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
+import { CreateEventDTO } from "./dto/create-event.dto.js";
 
-interface GetEventsQuery {
-  search?: string;
-  category?: string;
-  location?: string;
-  page?: number;
-  limit?: number;
-}
 
 export class EventService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
-  getEvents = async (query: GetEventsQuery) => {
-    const { search, category, location, page = 1, limit = 10 } = query;
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const where: any = {
-      startDate: { gte: new Date() }, 
-    };
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    if (category) {
-      where.category = category as EventCategory;
-    }
-
-    if (location) {
-      where.location = { contains: location, mode: "insensitive" };
-    }
-
-    const [events, total] = await Promise.all([
-      this.prisma.event.findMany({
-        where,
-        skip,
-        take: Number(limit),
-        orderBy: { startDate: "asc" },
-        include: {
-          organizer: {
-            select: { id: true, name: true, email: true },
-          },
-          ticketTypes: true,
-        },
-      }),
-      this.prisma.event.count({ where }),
-    ]);
-
-    return {
-      data: events,
-      meta: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / Number(limit)),
-      },
-    };
-  };
-
-  getEventById = async (id: string) => {
-    const event = await this.prisma.event.findUnique({
-      where: { id },
-      include: {
-        organizer: {
-          select: { id: true, name: true, email: true },
-        },
-        ticketTypes: true,
-        vouchers: {
-          where: {
-            startDate: { lte: new Date() },
-            endDate: { gte: new Date() },
-          },
-        },
+  createEvent = async (
+    body: CreateEventDTO,
+    thumbnail: Express.Multer.File | undefined,
+    organizerId: string,
+  ) => {
+    const event = await this.prisma.event.findFirst({
+      where: {
+        name: body.name,
       },
     });
 
-    if (!event) {
-      throw { message: "Event not found", status: 404 };
+    if (event) throw new ApiError("event name already in use", 400);
+
+    const slug = generateSlug(body.name);
+
+    const existingSlug = await this.prisma.event.findUnique({
+      where: {
+        slug: slug,
+      },
+    });
+
+    let finalSlug = slug;
+
+    if (existingSlug) {
+      finalSlug = `${slug}-${Math.floor(Math.random() * 10000)}`;
     }
 
-    return event;
+    const isFree = body.isFree === "true";
+    const price = body.price ? Number(body.price) : 0;
+    const availableSeats = Number(body.availableSeats);
+    const totalSeats = Number(body.totalSeats);
+
+    if (new Date(body.endDate) < new Date(body.startDate)) {
+      throw new ApiError("end date cannot be earlier than start date", 400);
+    }
+
+    if (availableSeats > totalSeats) {
+      throw new ApiError("available seats cannot be greater than total seats", 400);
+    }
+
+    if (!isFree && !body.price) {
+      throw new ApiError("price is required for paid event", 400);
+    }
+
+    let imageUrl: string | null = null;
+
+    if (thumbnail) {
+      const { secure_url } = await this.cloudinaryService.upload(thumbnail);
+      imageUrl = secure_url;
+    }
+
+    await this.prisma.event.create({
+      data: {
+        name: body.name,
+        slug: finalSlug,
+        description: body.description,
+        category: body.category as EventCategory,
+        location: body.location,
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        price: isFree ? 0 : price,
+        isFree: isFree,
+        availableSeats: availableSeats,
+        totalSeats: totalSeats,
+        imageUrl: imageUrl,
+        organizerId: organizerId,
+      },
+    });
+
+    return { message: "create event success" };
   };
 }
