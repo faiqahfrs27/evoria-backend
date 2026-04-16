@@ -30,7 +30,7 @@ export class App {
   }
 
   
-  private registerModule() {
+  private registerModules() {
     // services
     const sampleService = new SampleService(prisma);
 
