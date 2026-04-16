@@ -9,7 +9,7 @@ export class LoginService {
   constructor(private prisma: PrismaClient) {}
 
   login = async (body: LoginDTO) => {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: {
         email: body.email,
         deletedAt: null, //soft delete

@@ -9,6 +9,8 @@ import {
   REFERRAL_POINT,
 } from "../constants.js";
 import { RegisterDTO } from "../dto/register.dto.js";
+import { generateReferralCode } from "../../../utils/referral/generate-referral-code.js";
+import { REFERRAL_EXPIRED_MONTH } from "../constants.js";
 
 export class RegisterService {
   constructor(
