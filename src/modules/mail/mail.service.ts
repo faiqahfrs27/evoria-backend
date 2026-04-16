@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { createTransport, Transporter } from "nodemailer";
 import fs from "fs/promises";
 import handlebars from "handlebars";
+import "dotenv/config";
 
 export class MailService {
   private transporter: Transporter;
