@@ -23,16 +23,14 @@ export class EventRouter {
   private initRoutes = () => {
     const JWT_SECRET = process.env.JWT_SECRET as string;
 
-    // ── PUBLIC ──────────────────────────────────────────────
     this.router.get(
       "/",
-      this.validationMiddleware.validateBody(GetEventDTO), // ← validasi query params
+      this.validationMiddleware.validateBody(GetEventDTO),
       this.eventController.getEvents
     );
 
     this.router.get("/:id", this.eventController.getEventById);
 
-    // ── PROTECTED ───────────────────────────────────────────
     this.router.post(
       "/",
       this.authMiddleware.verifyToken(JWT_SECRET),
