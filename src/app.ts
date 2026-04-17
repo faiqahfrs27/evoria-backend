@@ -83,7 +83,6 @@ export class App {
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
     this.app.use("/api/events", eventRouter.getRouter());
-    this.app.use("/events", eventRouter.getRouter());
   }
 
   private errors() {
