@@ -1,34 +1,54 @@
-import { plainToInstance } from "class-transformer";
-import { validate } from "class-validator";
-import { Request, Response } from "express";
-import { ApiError } from "../../utils/api-error.js";
+import { NextFunction, Request, Response } from "express";
 import { EventService } from "./event.service.js";
-import { CreateEventDTO } from "./dto/create-event.dto.js";
 
 export class EventController {
   constructor(private eventService: EventService) {}
 
-  createEvent = async (req: Request, res: Response) => {
-    const body = plainToInstance(CreateEventDTO, req.body);
-
-    const errors = await validate(body);
-    if (errors.length > 0) {
-      throw new ApiError("validation failed", 400);
+  getEvents = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const query = req.query;
+      const result = await this.eventService.getEvent(query as any);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
     }
+  };
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    const thumbnail = files?.thumbnail?.[0];
+  getEventById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id as string;
+      const event = await this.eventService.getEventById(id);
+      res.status(200).json({ data: event });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-    if (!thumbnail) throw new ApiError("thumbnail is required", 400);
+  createEvent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body;
 
-    const organizerId = res.locals.user.id;
+      const files = req.files as {
+        [fieldname: string]: Express.Multer.File[];
+      };
+      const thumbnail = files?.thumbnail?.[0];
 
-    const result = await this.eventService.createEvent(
-      body,
-      thumbnail,
-      organizerId,
-    );
+      if (!thumbnail) {
+        res.status(400).json({ message: "Thumbnail is required" });
+        return;
+      }
 
-    res.status(200).send(result);
+      const organizerId = res.locals.user.id;
+
+      const result = await this.eventService.createEvent(
+        body,
+        thumbnail,
+        organizerId,
+      );
+
+      res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
   };
 }

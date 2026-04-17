@@ -18,6 +18,11 @@ import { RegisterController } from "./modules/auth/register/register.controller.
 import { AuthRouter } from "./modules/auth/auth.router.js";
 import { LoginController } from "./modules/auth/login/login.controller.js";
 import { LoginService } from "./modules/auth/login/login.service.js";
+import "reflect-metadata";
+import { MailService } from "./modules/mail/mail.service.js";
+import { VoucherService } from "./modules/voucher/voucher.service.js";
+import { VoucherController } from "./modules/voucher/voucher.controller.js";
+import { VoucherRouter } from "./modules/voucher/voucher.router.js";
 
 export class App {
   app: Express;
@@ -25,7 +30,7 @@ export class App {
   constructor() {
     this.app = express();
     this.configure();
-    this.registerModule();
+    this.registerModules();
     this.errors();
   }
 
@@ -35,12 +40,9 @@ export class App {
     this.app.use(cookieParser());
   }
 
-  
-  private registerModule() {
+  private registerModules() {
     // services
-    const cloudinaryService = new CloudinaryService();
     const sampleService = new SampleService(prisma);
-    const eventService = new EventService(prisma, cloudinaryService);
 
     // controllers
     const sampleController = new SampleController(sampleService);
@@ -48,41 +50,52 @@ export class App {
     // routes
     const sampleRouter = new SampleRouter(sampleController);
 
-    // Auth Services
-    const registerService = new RegisterService(prisma);
+    // Services
+    const mailService = new MailService();
+    const registerService = new RegisterService(prisma, mailService);
     const loginService = new LoginService(prisma);
+    const cloudinaryService = new CloudinaryService();
+    const eventService = new EventService(prisma, cloudinaryService);
+    const voucherService = new VoucherService(prisma);
 
-    // Auth Controller
+
+    // Controller
     const registerController = new RegisterController(registerService);
     const loginController = new LoginController(loginService);
-
-    
-    // Auth Routes (Register, Login)
-    const authRouter = new AuthRouter(registerController, loginController);
-
-    // entry point
-    this.app.use("/api/auth", authRouter.getRouter());
-    this.app.use("/samples", sampleRouter.getRouter());
-    
-
-    // Event controllers
     const eventController = new EventController(eventService);
+    const voucherController = new VoucherController(voucherService);
 
-    // middlewares
+
+    // Middlewares
+    const authMidlleware = new AuthMiddleware();
     const authMiddleware = new AuthMiddleware();
     const uploadMiddleware = new UploadMiddleware();
     const validationMiddleware = new ValidationMiddleware();
 
-    // Event Routes
+    // Routes
+    const authRouter = new AuthRouter(
+      registerController,
+      loginController,
+      validationMiddleware,
+    );
     const eventRouter = new EventRouter(
       eventController,
       authMiddleware,
       uploadMiddleware,
-      validationMiddleware
+      validationMiddleware,
+    );
+    const voucherRouter = new VoucherRouter(
+      voucherController,
+      authMiddleware,
+      validationMiddleware,
     );
 
+    
     // entry point
-    this.app.use("/api/events", eventRouter.getRouter());
+    this.app.use("/auth", authRouter.getRouter());
+    this.app.use("/samples", sampleRouter.getRouter());
+    this.app.use("/events", eventRouter.getRouter());
+    this.app.use("/events/:eventId/vouchers", voucherRouter.getRouter());
   }
 
   private errors() {
