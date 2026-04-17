@@ -4,7 +4,6 @@ import { VoucherService } from "./voucher.service.js";
 export class VoucherController {
   constructor(private voucherService: VoucherService) {}
 
-  // GET /api/events/:eventId/vouchers
   getVouchers = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const eventId = req.params.eventId as string;
@@ -21,7 +20,6 @@ export class VoucherController {
     }
   };
 
-  // POST /api/events/:eventId/vouchers
   createVoucher = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const eventId = req.params.eventId as string;
@@ -40,7 +38,6 @@ export class VoucherController {
     }
   };
 
-  // DELETE /api/events/:eventId/vouchers/:voucherId
   deleteVoucher = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const voucherId = req.params.voucherId as string;

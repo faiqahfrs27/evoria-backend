@@ -14,7 +14,7 @@ export class VoucherRouter {
     private authMiddleware: AuthMiddleware,
     private validationMiddleware: ValidationMiddleware
   ) {
-    this.router = Router({ mergeParams: true }); // ← penting! biar bisa baca :eventId dari parent route
+    this.router = Router({ mergeParams: true }); 
     this.initRoutes();
   }
 
