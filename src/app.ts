@@ -19,7 +19,6 @@ import { AuthRouter } from "./modules/auth/auth.router.js";
 import { LoginController } from "./modules/auth/login/login.controller.js";
 import { LoginService } from "./modules/auth/login/login.service.js";
 import "reflect-metadata";
-import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
 import { MailService } from "./modules/mail/mail.service.js";
 
 export class App {
@@ -83,7 +82,6 @@ export class App {
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
     this.app.use("/api/events", eventRouter.getRouter());
-    this.app.use("/events", eventRouter.getRouter());
   }
 
   private errors() {
