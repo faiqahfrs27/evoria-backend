@@ -1,30 +1,35 @@
 import { hash } from "argon2";
 import { PrismaClient, Role, User } from "../../../generated/prisma/client.js";
 import { ApiError } from "../../../utils/api-error.js";
-import { RegisterDTO } from "../dto/register.dto.js";
 import { generateReferralCode } from "../../../utils/referral/generate-referral-code.js";
-import { REFERRAL_EXPIRED_MONTH } from "../constants.js";
+import { MailService } from "../../mail/mail.service.js";
+import {
+  DISCOUNT_REFERRAL,
+  REFERRAL_EXPIRED_MONTH,
+  REFERRAL_POINT,
+} from "../constants.js";
+import { RegisterDTO } from "../dto/register.dto.js";
 
 export class RegisterService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private mailService: MailService,
+  ) {}
 
   register = async (body: RegisterDTO) => {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        email: body.email,
-      },
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: body.email },
     });
 
-    if (user) {
+    if (existingUser) {
       throw new ApiError("Email is already registered!", 400);
     }
 
-    //role default to customer
     const role: Role = body.role ?? Role.USER;
 
     let referrer: User | null = null;
     if (body.referralCode) {
-      if (role != Role.USER) {
+      if (role !== Role.USER) {
         throw new ApiError("Only customers can use a referral code!", 400);
       }
 
@@ -41,7 +46,7 @@ export class RegisterService {
       }
 
       if (referrer.email === body.email) {
-        throw new ApiError("Can not use your own referral code!", 400);
+        throw new ApiError("Cannot use your own referral code!", 400);
       }
     }
 
@@ -59,11 +64,9 @@ export class RegisterService {
 
     const now = new Date();
     const threeMonthsLater = new Date(now);
-    threeMonthsLater.setMonth(
-      threeMonthsLater.getMonth() + REFERRAL_EXPIRED_MONTH,
-    );
+    threeMonthsLater.setMonth(now.getMonth() + REFERRAL_EXPIRED_MONTH);
 
-    await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
         data: {
           name: body.name,
@@ -71,40 +74,75 @@ export class RegisterService {
           password: hashedPassword,
           role,
           referralCode,
-          ...(referrer && {referredById: referrer.id}),
+          ...(referrer && { referredById: referrer.id }),
         },
       });
 
-      // Only run reward logic when a valid referral code was used
       if (referrer) {
-        // New user gets a 10% discount coupon (platform-issued, any event)
         await tx.coupon.create({
           data: {
             userId: newUser.id,
             code: `WELCOME-${referralCode}`,
-            discountPercent: 10,
+            discountPercent: DISCOUNT_REFERRAL,
             source: "REFERRAL_REWARD",
-            eventId: null,           // null = valid for ALL events
+            eventId: null,
             expiresAt: threeMonthsLater,
             isUsed: false,
           },
         });
 
-         // Referrer gets 10,000 points (expires 3 months from now)
-        await tx.point.create({
+        try{
+          await tx.point.create({
+            data: {
+              userId: referrer.id,
+              amount: REFERRAL_POINT,
+              source: `Referral: ${newUser.name}`,
+              expiresAt: threeMonthsLater,
+              isExpired: false,
+            },
+          });
+          console.log("POINT CREATED")
+        } catch(err){
+          console.error("POINT ERROR", err)
+        }
+
+        await tx.referralUsage.create({
           data: {
-            userId: referrer.id,
-            amount: 10_000,
-            source: `Referral: ${newUser.name}`,
-            expiresAt: threeMonthsLater,
-            isExpired: false,
+            referrerId: referrer.id,
+            referredUserId: newUser.id,
           },
         });
       }
+
+      return { newUser, referrer };
     });
 
-    return {
-      message: "register success",
-    };
+    await this.mailService.sendMail({
+      to: result.newUser.email,
+      subject: "Your Welcome Coupon 🎁",
+      templateName: "welcomeCoupon",
+      context: {
+        name: result.newUser.name,
+        code: `WELCOME-${referralCode}`,
+        discount: DISCOUNT_REFERRAL,
+        expiresAt: threeMonthsLater.toDateString(),
+      },
+    });
+
+    if (result.referrer) {
+      await this.mailService.sendMail({
+        to: result.referrer.email,
+        subject: "You Got a Referral Reward 🎉",
+        templateName: "referralReward",
+        context: {
+          name: result.referrer.name,
+          points: REFERRAL_POINT,
+          referredUser: result.newUser.name,
+          expiresAt: threeMonthsLater.toDateString(),
+        },
+      });
+    }
+
+    return { message: "Register success" };
   };
 }

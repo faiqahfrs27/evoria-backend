@@ -12,14 +12,20 @@ export class EventService {
   ) {}
 
   getEvent = async (query: GetEventDTO) => {
-    const { page, take, sortBy, sortOrder, search, category, location } = query;
-
-    // Pakai Prisma.EventWhereInput bukan any
+ const {
+    page = 1,           
+    take = 5,          
+    sortBy = "startDate", 
+    sortOrder = "asc",  
+    search,
+    category,
+    location,
+  } = query;
     const whereClause: Prisma.EventWhereInput = {
-      startDate: { gte: new Date() }, // hanya upcoming events
+      startDate: { gte: new Date() }, 
     };
 
-    // Filter search by nama event
+    // Filter search by name event
     if (search) {
       whereClause.name = { contains: search, mode: "insensitive" };
     }
