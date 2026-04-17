@@ -20,6 +20,9 @@ import { LoginController } from "./modules/auth/login/login.controller.js";
 import { LoginService } from "./modules/auth/login/login.service.js";
 import "reflect-metadata";
 import { MailService } from "./modules/mail/mail.service.js";
+import { VoucherService } from "./modules/voucher/voucher.service.js";
+import { VoucherController } from "./modules/voucher/voucher.controller.js";
+import { VoucherRouter } from "./modules/voucher/voucher.router.js";
 
 export class App {
   app: Express;
@@ -53,11 +56,15 @@ export class App {
     const loginService = new LoginService(prisma);
     const cloudinaryService = new CloudinaryService();
     const eventService = new EventService(prisma, cloudinaryService);
+    const voucherService = new VoucherService(prisma);
+
 
     // Controller
     const registerController = new RegisterController(registerService);
     const loginController = new LoginController(loginService);
     const eventController = new EventController(eventService);
+    const voucherController = new VoucherController(voucherService);
+
 
     // Middlewares
     const authMidlleware = new AuthMiddleware();
@@ -77,11 +84,18 @@ export class App {
       uploadMiddleware,
       validationMiddleware,
     );
+    const voucherRouter = new VoucherRouter(
+      voucherController,
+      authMiddleware,
+      validationMiddleware,
+    );
 
+    
     // entry point
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
-    this.app.use("/api/events", eventRouter.getRouter());
+    this.app.use("/events", eventRouter.getRouter());
+    this.app.use("/events/:eventId/vouchers", voucherRouter.getRouter());
   }
 
   private errors() {
