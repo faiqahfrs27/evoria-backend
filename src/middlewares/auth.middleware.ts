@@ -34,8 +34,4 @@ export class AuthMiddleware {
       next();
     };
   };
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> dev
