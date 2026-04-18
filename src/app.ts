@@ -30,6 +30,9 @@ import { LogoutController } from "./modules/auth/logout/logout.controller.js";
 import { LogoutService } from "./modules/auth/logout/logout.service.js";
 import { RefreshService } from "./modules/auth/refresh-token/refresh.service.js";
 import { RefreshController } from "./modules/auth/refresh-token/refresh.controller.js";
+import { ReviewService } from "./modules/review/review.service.js";
+import { ReviewController } from "./modules/review/review.controller.js";
+import { ReviewRouter } from "./modules/review/review.router.js";
 
 export class App {
   app: Express;
@@ -66,6 +69,7 @@ export class App {
     const cloudinaryService = new CloudinaryService();
     const eventService = new EventService(prisma, cloudinaryService);
     const voucherService = new VoucherService(prisma);
+    const reviewService = new ReviewService(prisma);
 
     // Controller
     const registerController = new RegisterController(registerService);
@@ -74,6 +78,7 @@ export class App {
     const refreshController = new RefreshController(refreshService);
     const eventController = new EventController(eventService);
     const voucherController = new VoucherController(voucherService);
+    const reviewController = new ReviewController(reviewService);
 
     // Middlewares
     const authMiddleware = new AuthMiddleware();
@@ -113,12 +118,19 @@ export class App {
       validationMiddleware,
     );
 
+    const reviewRouter = new ReviewRouter(
+      reviewController,
+      authMiddleware,
+      validationMiddleware,
+    );
+
     // entry point
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
     this.app.use("/events", eventRouter.getRouter());
     this.app.use("/events/:eventId/vouchers", voucherRouter.getRouter());
     this.app.use("/transactions", transactionRouter.getRouter());
+    this.app.use("/reviews", reviewRouter.getRouter());
   }
 
   private errors() {
