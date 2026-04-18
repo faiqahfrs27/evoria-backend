@@ -59,12 +59,14 @@ model User {
   referralUsagesReceived ReferralUsage[] @relation("Referred")
 
   refreshTokens RefreshToken?
+  
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  points    Point[]
-  coupons   Coupon[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  points              Point[]
+  coupons             Coupon[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -176,4 +178,17 @@ model Coupon {
 
   @@index([userId])
   @@map("coupons")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @db.Uuid
+  expiredAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }

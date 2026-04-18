@@ -27,6 +27,10 @@ import { LogoutController } from "./modules/auth/logout/logout.controller.js";
 import { LogoutService } from "./modules/auth/logout/logout.service.js";
 import { RefreshService } from "./modules/auth/refresh-token/refresh.service.js";
 import { RefreshController } from "./modules/auth/refresh-token/refresh.controller.js";
+import { ForgotPasswordService } from "./modules/auth/forgot-password/forgot-password.service.js";
+import { ForgotPasswordController } from "./modules/auth/forgot-password/forgot-password.controller.js";
+import { ResetPasswordService } from "./modules/auth/reset-password/reset-password.service.js";
+import { ResetPasswordController } from "./modules/auth/reset-password/reset-password.controller.js";
 
 export class App {
   app: Express;
@@ -60,6 +64,11 @@ export class App {
     const loginService = new LoginService(prisma);
     const logoutService = new LogoutService(prisma);
     const refreshService = new RefreshService(prisma);
+    const forgotPasswordService = new ForgotPasswordService(
+      prisma,
+      mailService,
+    );
+    const resetPasswordService = new ResetPasswordService(prisma);
     const cloudinaryService = new CloudinaryService();
     const eventService = new EventService(prisma, cloudinaryService);
     const voucherService = new VoucherService(prisma);
@@ -69,6 +78,10 @@ export class App {
     const loginController = new LoginController(loginService);
     const logoutController = new LogoutController(logoutService);
     const refreshController = new RefreshController(refreshService);
+    const forgotPasswordController = new ForgotPasswordController(
+      forgotPasswordService,
+    );
+    const resetPasswordController = new ResetPasswordController(resetPasswordService);
     const eventController = new EventController(eventService);
     const voucherController = new VoucherController(voucherService);
 
@@ -83,14 +96,19 @@ export class App {
       loginController,
       logoutController,
       refreshController,
+      forgotPasswordController,
+      resetPasswordController,
       validationMiddleware,
+      authMiddleware,
     );
+
     const eventRouter = new EventRouter(
       eventController,
       authMiddleware,
       uploadMiddleware,
       validationMiddleware,
     );
+    
     const voucherRouter = new VoucherRouter(
       voucherController,
       authMiddleware,

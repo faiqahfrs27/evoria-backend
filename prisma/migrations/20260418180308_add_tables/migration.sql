@@ -35,6 +35,7 @@ CREATE TABLE "users" (
 CREATE TABLE "events" (
     "id" UUID NOT NULL,
     "name" VARCHAR NOT NULL,
+    "slug" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "category" "EventCategory" NOT NULL,
     "location" TEXT NOT NULL,
@@ -128,11 +129,25 @@ CREATE TABLE "coupons" (
     CONSTRAINT "coupons_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "password_reset_tokens" (
+    "id" UUID NOT NULL,
+    "token" TEXT NOT NULL,
+    "userId" UUID NOT NULL,
+    "expiredAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "password_reset_tokens_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_referralCode_key" ON "users"("referralCode");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "events_slug_key" ON "events"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "vouchers_code_key" ON "vouchers"("code");
@@ -154,6 +169,12 @@ CREATE UNIQUE INDEX "coupons_code_key" ON "coupons"("code");
 
 -- CreateIndex
 CREATE INDEX "coupons_userId_idx" ON "coupons"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "password_reset_tokens_userId_idx" ON "password_reset_tokens"("userId");
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_referredById_fkey" FOREIGN KEY ("referredById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -181,3 +202,6 @@ ALTER TABLE "points" ADD CONSTRAINT "points_userId_fkey" FOREIGN KEY ("userId") 
 
 -- AddForeignKey
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
