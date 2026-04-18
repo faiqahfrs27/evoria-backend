@@ -2,7 +2,11 @@ import { verify } from "argon2";
 import { PrismaClient, User } from "../../../generated/prisma/client.js";
 import { ApiError } from "../../../utils/api-error.js";
 import jwt from "jsonwebtoken";
-import { EXPIRED_7_DAY, EXPIRED_ACCESS_TOKEN_JWT, EXPIRED_REFRESH_TOKEN_JWT } from "../constants.js";
+import {
+  EXPIRED_7_DAY,
+  EXPIRED_ACCESS_TOKEN_JWT,
+  EXPIRED_REFRESH_TOKEN_JWT,
+} from "../constants.js";
 import { LoginDTO } from "../dto/login.dto.js";
 
 export class LoginService {
@@ -52,6 +56,6 @@ export class LoginService {
 
     const { password, ...userWithoutPassword } = user;
 
-    return { user: userWithoutPassword, accessToken };
+    return { user: userWithoutPassword, accessToken, refreshToken };
   };
 }

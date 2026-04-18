@@ -4,6 +4,8 @@ import { LoginController } from "./login/login.controller.js";
 import { ValidationMiddleware } from "../../middlewares/validation.middleware.js";
 import { RegisterDTO } from "./dto/register.dto.js";
 import { LoginDTO } from "./dto/login.dto.js";
+import { LogoutController } from "./logout/logout.controller.js";
+import { RefreshController } from "./refresh-token/refresh.controller.js";
 
 export class AuthRouter {
   router: Router;
@@ -11,6 +13,8 @@ export class AuthRouter {
   constructor(
     private registerController: RegisterController,
     private loginController: LoginController,
+    private logoutController: LogoutController,
+    private refreshController: RefreshController,
     private validationMiddleware: ValidationMiddleware,
   ) {
     this.router = Router();
@@ -29,6 +33,9 @@ export class AuthRouter {
       this.validationMiddleware.validateBody(LoginDTO),
       this.loginController.login,
     );
+
+    this.router.post("/logout", this.logoutController.logout);
+    this.router.post("/refresh", this.refreshController.refresh);
   };
 
   getRouter = () => {
