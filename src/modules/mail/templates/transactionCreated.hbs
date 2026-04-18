@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+  <h2>Transaksi Berhasil Dibuat!</h2>
+  <p>Halo <strong>{{customerName}}</strong>,</p>
+  <p>Transaksi kamu untuk event <strong>{{eventName}}</strong> telah berhasil dibuat.</p>
+  
+  <table style="border-collapse: collapse; width: 100%;">
+    <tr>
+      <td style="padding: 8px;"><strong>ID Transaksi</strong></td>
+      <td style="padding: 8px;">{{transactionId}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px;"><strong>Event</strong></td>
+      <td style="padding: 8px;">{{eventName}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px;"><strong>Total Bayar</strong></td>
+      <td style="padding: 8px;">Rp {{finalPrice}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px;"><strong>Batas Bayar</strong></td>
+      <td style="padding: 8px;">{{paymentDeadline}}</td>
+    </tr>
+  </table>
+
+  <p style="color: red;">⚠️ Segera lakukan pembayaran sebelum batas waktu!</p>
+  <p>Setelah transfer, upload bukti pembayaran di aplikasi.</p>
+</body>
+</html>

@@ -23,6 +23,9 @@ import { MailService } from "./modules/mail/mail.service.js";
 import { VoucherService } from "./modules/voucher/voucher.service.js";
 import { VoucherController } from "./modules/voucher/voucher.controller.js";
 import { VoucherRouter } from "./modules/voucher/voucher.router.js";
+import { TransactionService } from "./modules/transaction/transaction.service.js";
+import { TransactionController } from "./modules/transaction/transaction.controller.js";
+import { TransactionRouter } from "./modules/transaction/transaction.router.js";
 import { LogoutController } from "./modules/auth/logout/logout.controller.js";
 import { LogoutService } from "./modules/auth/logout/logout.service.js";
 import { RefreshService } from "./modules/auth/refresh-token/refresh.service.js";
@@ -97,11 +100,25 @@ export class App {
       validationMiddleware,
     );
 
+    const transactionService = new TransactionService(
+      prisma,
+      cloudinaryService,
+      mailService,
+    );
+    const transactionController = new TransactionController(transactionService);
+    const transactionRouter = new TransactionRouter(
+      transactionController,
+      authMiddleware,
+      uploadMiddleware,
+      validationMiddleware,
+    );
+
     // entry point
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
     this.app.use("/events", eventRouter.getRouter());
     this.app.use("/events/:eventId/vouchers", voucherRouter.getRouter());
+    this.app.use("/transactions", transactionRouter.getRouter());
   }
 
   private errors() {
