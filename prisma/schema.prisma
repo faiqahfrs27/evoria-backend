@@ -36,6 +36,15 @@ enum EventCategory {
   OTHER
 }
 
+enum TransactionStatus {
+  WAITING_FOR_PAYMENT
+  WAITING_FOR_ADMIN_CONFIRMATION
+  DONE
+  REJECTED
+  EXPIRED
+  CANCELED
+}
+
 model User {
   id       String @id @default(uuid()) @db.Uuid
   name     String @db.VarChar()
@@ -48,6 +57,10 @@ model User {
   referralCode String @unique @default(uuid())
 
   events Event[]
+
+  transactions Transaction[] @relation("CustomerTransactions")
+
+  reviews Review[] @relation("CustomerReviews")
 
   //self relation
   referredById String? @db.Uuid
@@ -91,32 +104,36 @@ model Event {
   vouchers       Voucher[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  transactions   Transaction[]
+  reviews        Review[]
 
   @@map("events")
 }
 
 model TicketType {
-  id      String @id @default(uuid()) @db.Uuid
-  name    String @db.VarChar()
-  price   Int
-  quota   Int
-  eventId String @db.Uuid
-  event   Event  @relation(fields: [eventId], references: [id])
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String        @db.VarChar()
+  price        Int
+  quota        Int
+  eventId      String        @db.Uuid
+  event        Event         @relation(fields: [eventId], references: [id])
+  transactions Transaction[]
 
   @@map("ticket_types")
 }
 
 model Voucher {
-  id             String   @id @default(uuid()) @db.Uuid
-  code           String   @unique
+  id             String        @id @default(uuid()) @db.Uuid
+  code           String        @unique
   discountAmount Int
   startDate      DateTime
   endDate        DateTime
   quota          Int
-  usedCount      Int      @default(0)
-  eventId        String   @db.Uuid
-  event          Event    @relation(fields: [eventId], references: [id])
-  createdAt      DateTime @default(now())
+  usedCount      Int           @default(0)
+  eventId        String        @db.Uuid
+  event          Event         @relation(fields: [eventId], references: [id])
+  createdAt      DateTime      @default(now())
+  transactions   Transaction[]
 
   @@map("vouchers")
 }
@@ -191,4 +208,43 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+  
+model Transaction {
+  id              String            @id @default(uuid()) @db.Uuid
+  customerId      String            @db.Uuid
+  customer        User              @relation("CustomerTransactions", fields: [customerId], references: [id])
+  eventId         String            @db.Uuid
+  event           Event             @relation(fields: [eventId], references: [id])
+  ticketTypeId    String?           @db.Uuid
+  ticketType      TicketType?       @relation(fields: [ticketTypeId], references: [id])
+  voucherId       String?           @db.Uuid
+  voucher         Voucher?          @relation(fields: [voucherId], references: [id])
+  status          TransactionStatus @default(WAITING_FOR_PAYMENT)
+  quantity        Int               @default(1)
+  basePrice       Int
+  finalPrice      Int
+  pointUsed       Int               @default(0)
+  paymentProof    String?
+  paymentDeadline DateTime
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("transactions")
+}
+
+model Review {
+  id         String  @id @default(uuid()) @db.Uuid
+  customerId String  @db.Uuid
+  customer   User    @relation("CustomerReviews", fields: [customerId], references: [id])
+  eventId    String  @db.Uuid
+  event      Event   @relation(fields: [eventId], references: [id])
+  rating     Int // 1-5
+  comment    String? // opsional
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 1 customer hanya bisa review 1 event 1x
+  @@unique([customerId, eventId])
+  @@map("reviews")
 }
