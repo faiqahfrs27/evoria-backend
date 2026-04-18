@@ -6,9 +6,24 @@ import { ApiError } from "../utils/api-error.js";
 export class AuthMiddleware {
   verifyToken = (secretKey: string) => {
     return (req: Request, res: Response, next: NextFunction) => {
-      const token = req.cookies?.accessToken;
+      let token: string | undefined;
 
-      if (!token) throw new ApiError("No token provided", 401);
+      // kalo authBearerToken ada, masukin authBearerTokennya ke variable token
+      const authBearerToken = req.headers.authorization?.split(" ")[1];
+      if (authBearerToken) {
+        token = authBearerToken;
+      }
+
+      // kalo variable token ga keisi, berarti coba isi variablenya dengan token
+      // yg ada di cookie
+      if (!token) {
+        token = req.cookies.accessToken;
+      }
+
+      // kalo variable token ga keisi juga, berarti tokennya ga ada.
+      if (!token) {
+        throw new ApiError("No token provided", 401);
+      }
 
       try {
         const payload = jwt.verify(token, secretKey);
@@ -18,6 +33,7 @@ export class AuthMiddleware {
         if (error instanceof jwt.TokenExpiredError) {
           return next(new ApiError("Token expired", 401));
         }
+
         return next(new ApiError("Token invalid", 401));
       }
     };
