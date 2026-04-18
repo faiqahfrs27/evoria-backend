@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBooleanString,
   IsDateString,
   IsIn,
@@ -6,8 +7,9 @@ import {
   IsNumberString,
   IsOptional,
   IsString,
-  MinLength,
 } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { TicketTypeDTO } from "./ticket-type.dto.js";
 
 export class CreateEventDTO {
   @IsNotEmpty()
@@ -50,4 +52,5 @@ export class CreateEventDTO {
   @IsNotEmpty()
   @IsNumberString()
   totalSeats!: string;
+
 }
