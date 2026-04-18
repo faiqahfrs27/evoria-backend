@@ -26,7 +26,7 @@ export class EventController {
 
   createEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const body = req.body; 
+      const body = req.body;
 
       const files = req.files as {
         [fieldname: string]: Express.Multer.File[];
@@ -43,12 +43,12 @@ export class EventController {
       const result = await this.eventService.createEvent(
         body,
         thumbnail,
-        organizerId
+        organizerId,
       );
 
       res.status(201).json(result);
     } catch (error) {
-      next(error); 
+      next(error);
     }
   };
 }

@@ -1,4 +1,8 @@
-import { Prisma, PrismaClient, EventCategory } from "../../generated/prisma/client.js";
+import {
+  Prisma,
+  PrismaClient,
+  EventCategory,
+} from "../../generated/prisma/client.js";
 import { ApiError } from "../../utils/api-error.js";
 import { generateSlug } from "../../utils/generate-slug.js";
 import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
@@ -8,21 +12,21 @@ import { GetEventDTO } from "./dto/get-event.dto.js";
 export class EventService {
   constructor(
     private prisma: PrismaClient,
-    private cloudinaryService: CloudinaryService
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   getEvent = async (query: GetEventDTO) => {
- const {
-    page = 1,           
-    take = 5,          
-    sortBy = "startDate", 
-    sortOrder = "asc",  
-    search,
-    category,
-    location,
-  } = query;
+    const {
+      page = 1,
+      take = 5,
+      sortBy = "startDate",
+      sortOrder = "asc",
+      search,
+      category,
+      location,
+    } = query;
     const whereClause: Prisma.EventWhereInput = {
-      startDate: { gte: new Date() }, 
+      startDate: { gte: new Date() },
     };
 
     // Filter search by name event
@@ -85,7 +89,7 @@ export class EventService {
   createEvent = async (
     body: CreateEventDTO,
     thumbnail: Express.Multer.File | undefined,
-    organizerId: string
+    organizerId: string,
   ) => {
     const existing = await this.prisma.event.findFirst({
       where: { name: body.name },
@@ -98,6 +102,19 @@ export class EventService {
     if (thumbnail) {
       const { secure_url } = await this.cloudinaryService.upload(thumbnail);
       imageUrl = secure_url;
+    }
+
+    let parsedTicketTypes: { name: string; price: number; quota: number }[] =
+      [];
+    if ((body as any).ticketTypes) {
+      try {
+        parsedTicketTypes = JSON.parse((body as any).ticketTypes);
+      } catch {
+        throw new ApiError(
+          "Invalid ticketTypes format, must be valid JSON",
+          400,
+        );
+      }
     }
 
     await this.prisma.event.create({
@@ -115,6 +132,15 @@ export class EventService {
         totalSeats: Number(body.totalSeats),
         imageUrl,
         organizerId,
+        ticketTypes: parsedTicketTypes
+          ? {
+              create: parsedTicketTypes.map((t: any) => ({
+                name: t.name,
+                price: Number(t.price),
+                quota: Number(t.quota),
+              })),
+            }
+          : undefined,
       },
     });
 
