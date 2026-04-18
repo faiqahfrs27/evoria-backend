@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+  <h2>🚫 Transaksi Dibatalkan</h2>
+  <p>Halo <strong>{{customerName}}</strong>,</p>
+  <p>Transaksi kamu untuk event <strong>{{eventName}}</strong> telah dibatalkan secara otomatis karena organizer tidak merespon dalam 3 hari.</p>
+
+  {{#if pointUsed}}
+  <p>✅ <strong>{{pointUsed}} poin</strong> sudah dikembalikan ke akun kamu.</p>
+  {{/if}}
+
+  {{#if voucherCode}}
+  <p>✅ Voucher <strong>{{voucherCode}}</strong> sudah dikembalikan.</p>
+  {{/if}}
+
+  <p>Mohon maaf atas ketidaknyamanannya.</p>
+</body>
+</html>
