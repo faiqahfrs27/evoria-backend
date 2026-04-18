@@ -60,6 +60,8 @@ model User {
 
   transactions Transaction[] @relation("CustomerTransactions")
 
+  reviews Review[] @relation("CustomerReviews")
+
   //self relation
   referredById String? @db.Uuid
   referredBy   User?   @relation("UserReferral", fields: [referredById], references: [id])
@@ -101,6 +103,7 @@ model Event {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   transactions   Transaction[]
+  reviews        Review[]
 
   @@map("events")
 }
@@ -213,4 +216,21 @@ model Transaction {
   updatedAt       DateTime          @updatedAt
 
   @@map("transactions")
+}
+
+model Review {
+  id         String  @id @default(uuid()) @db.Uuid
+  customerId String  @db.Uuid
+  customer   User    @relation("CustomerReviews", fields: [customerId], references: [id])
+  eventId    String  @db.Uuid
+  event      Event   @relation(fields: [eventId], references: [id])
+  rating     Int // 1-5
+  comment    String? // opsional
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 1 customer hanya bisa review 1 event 1x
+  @@unique([customerId, eventId])
+  @@map("reviews")
 }
