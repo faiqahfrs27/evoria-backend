@@ -4,6 +4,9 @@ CREATE TYPE "Role" AS ENUM ('ORGANIZER', 'USER');
 -- CreateEnum
 CREATE TYPE "EventCategory" AS ENUM ('MUSIC', 'SPORTS', 'FOOD', 'ART', 'EDUCATION', 'OTHER');
 
+-- CreateEnum
+CREATE TYPE "TransactionStatus" AS ENUM ('WAITING_FOR_PAYMENT', 'WAITING_FOR_ADMIN_CONFIRMATION', 'DONE', 'REJECTED', 'EXPIRED', 'CANCELED');
+
 -- CreateTable
 CREATE TABLE "samples" (
     "id" SERIAL NOT NULL,
@@ -35,6 +38,7 @@ CREATE TABLE "users" (
 CREATE TABLE "events" (
     "id" UUID NOT NULL,
     "name" VARCHAR NOT NULL,
+    "slug" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "category" "EventCategory" NOT NULL,
     "location" TEXT NOT NULL,
@@ -128,11 +132,34 @@ CREATE TABLE "coupons" (
     CONSTRAINT "coupons_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "transactions" (
+    "id" UUID NOT NULL,
+    "customerId" UUID NOT NULL,
+    "eventId" UUID NOT NULL,
+    "ticketTypeId" UUID,
+    "voucherId" UUID,
+    "status" "TransactionStatus" NOT NULL DEFAULT 'WAITING_FOR_PAYMENT',
+    "quantity" INTEGER NOT NULL DEFAULT 1,
+    "basePrice" INTEGER NOT NULL,
+    "finalPrice" INTEGER NOT NULL,
+    "pointUsed" INTEGER NOT NULL DEFAULT 0,
+    "paymentProof" TEXT,
+    "paymentDeadline" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "transactions_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_referralCode_key" ON "users"("referralCode");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "events_slug_key" ON "events"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "vouchers_code_key" ON "vouchers"("code");
@@ -181,3 +208,15 @@ ALTER TABLE "points" ADD CONSTRAINT "points_userId_fkey" FOREIGN KEY ("userId") 
 
 -- AddForeignKey
 ALTER TABLE "coupons" ADD CONSTRAINT "coupons_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_ticketTypeId_fkey" FOREIGN KEY ("ticketTypeId") REFERENCES "ticket_types"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_voucherId_fkey" FOREIGN KEY ("voucherId") REFERENCES "vouchers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
