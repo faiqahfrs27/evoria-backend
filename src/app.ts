@@ -25,6 +25,8 @@ import { VoucherController } from "./modules/voucher/voucher.controller.js";
 import { VoucherRouter } from "./modules/voucher/voucher.router.js";
 import { LogoutController } from "./modules/auth/logout/logout.controller.js";
 import { LogoutService } from "./modules/auth/logout/logout.service.js";
+import { RefreshService } from "./modules/auth/refresh-token/refresh.service.js";
+import { RefreshController } from "./modules/auth/refresh-token/refresh.controller.js";
 
 export class App {
   app: Express;
@@ -57,6 +59,7 @@ export class App {
     const registerService = new RegisterService(prisma, mailService);
     const loginService = new LoginService(prisma);
     const logoutService = new LogoutService(prisma);
+    const refreshService = new RefreshService(prisma);
     const cloudinaryService = new CloudinaryService();
     const eventService = new EventService(prisma, cloudinaryService);
     const voucherService = new VoucherService(prisma);
@@ -65,6 +68,7 @@ export class App {
     const registerController = new RegisterController(registerService);
     const loginController = new LoginController(loginService);
     const logoutController = new LogoutController(logoutService);
+    const refreshController = new RefreshController(refreshService);
     const eventController = new EventController(eventService);
     const voucherController = new VoucherController(voucherService);
 
@@ -78,6 +82,7 @@ export class App {
       registerController,
       loginController,
       logoutController,
+      refreshController,
       validationMiddleware,
     );
     const eventRouter = new EventRouter(
