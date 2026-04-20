@@ -37,6 +37,9 @@ import { ResetPasswordController } from "./modules/auth/reset-password/reset-pas
 import { ReviewService } from "./modules/review/review.service.js";
 import { ReviewController } from "./modules/review/review.controller.js";
 import { ReviewRouter } from "./modules/review/review.router.js";
+import { ProfileService } from "./modules/profile/profile.service.js";
+import { ProfileController } from "./modules/profile/profile.controller.js";
+import { ProfileRouter } from "./modules/profile/profile.router.js";
 
 export class App {
   app: Express;
@@ -79,6 +82,12 @@ export class App {
     const eventService = new EventService(prisma, cloudinaryService);
     const voucherService = new VoucherService(prisma);
     const reviewService = new ReviewService(prisma);
+    const transactionService = new TransactionService(
+      prisma,
+      cloudinaryService,
+      mailService,
+    );
+    const profileService = new ProfileService(prisma, cloudinaryService);
 
     // Controller
     const registerController = new RegisterController(registerService);
@@ -88,10 +97,14 @@ export class App {
     const forgotPasswordController = new ForgotPasswordController(
       forgotPasswordService,
     );
-    const resetPasswordController = new ResetPasswordController(resetPasswordService);
+    const resetPasswordController = new ResetPasswordController(
+      resetPasswordService,
+    );
     const eventController = new EventController(eventService);
     const voucherController = new VoucherController(voucherService);
     const reviewController = new ReviewController(reviewService);
+    const transactionController = new TransactionController(transactionService);
+    const profileController = new ProfileController(profileService);
 
     // Middlewares
     const authMiddleware = new AuthMiddleware();
@@ -116,19 +129,13 @@ export class App {
       uploadMiddleware,
       validationMiddleware,
     );
-    
+
     const voucherRouter = new VoucherRouter(
       voucherController,
       authMiddleware,
       validationMiddleware,
     );
 
-    const transactionService = new TransactionService(
-      prisma,
-      cloudinaryService,
-      mailService,
-    );
-    const transactionController = new TransactionController(transactionService);
     const transactionRouter = new TransactionRouter(
       transactionController,
       authMiddleware,
@@ -142,6 +149,13 @@ export class App {
       validationMiddleware,
     );
 
+    const profileRouter = new ProfileRouter(
+      profileController,
+      authMiddleware,
+      uploadMiddleware,
+      validationMiddleware,
+    );
+
     // entry point
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
@@ -149,6 +163,7 @@ export class App {
     this.app.use("/events/:eventId/vouchers", voucherRouter.getRouter());
     this.app.use("/transactions", transactionRouter.getRouter());
     this.app.use("/reviews", reviewRouter.getRouter());
+    this.app.use("/profile", profileRouter.getRouter());
   }
 
   private errors() {
