@@ -1,12 +1,14 @@
 import { NextFunction, Request, Response } from "express";
 import { EventService } from "./event.service.js";
+import { plainToInstance } from "class-transformer";
+import { GetEventDTO } from "./dto/get-event.dto.js";
 
 export class EventController {
   constructor(private eventService: EventService) {}
 
   getEvents = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const query = req.query;
+      const query = plainToInstance(GetEventDTO, req.query);
       const result = await this.eventService.getEvent(query as any);
       res.status(200).json(result);
     } catch (error) {

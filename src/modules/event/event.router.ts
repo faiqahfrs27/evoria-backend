@@ -25,7 +25,6 @@ export class EventRouter {
 
     this.router.get(
       "/",
-      this.validationMiddleware.validateBody(GetEventDTO),
       this.eventController.getEvents
     );
 

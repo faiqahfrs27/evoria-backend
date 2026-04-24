@@ -40,6 +40,7 @@ import { ReviewRouter } from "./modules/review/review.router.js";
 import { ProfileService } from "./modules/profile/profile.service.js";
 import { ProfileController } from "./modules/profile/profile.controller.js";
 import { ProfileRouter } from "./modules/profile/profile.router.js";
+import { corsOptions } from "./config/cors.js";
 
 export class App {
   app: Express;
@@ -52,7 +53,7 @@ export class App {
   }
 
   private configure() {
-    this.app.use(cors());
+    this.app.use(cors(corsOptions));
     this.app.use(express.json());
     this.app.use(cookieParser());
   }
