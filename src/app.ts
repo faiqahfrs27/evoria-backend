@@ -1,46 +1,49 @@
-import cors from "cors";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import express, { Express } from "express";
+import "reflect-metadata";
+import { corsOptions } from "./config/cors.js";
 import { prisma } from "./lib/prisma.js";
 import { AuthMiddleware } from "./middlewares/auth.middleware.js";
 import { UploadMiddleware } from "./middlewares/upload.middleware.js";
 import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
+import { AuthRouter } from "./modules/auth/auth.router.js";
+import { ForgotPasswordController } from "./modules/auth/forgot-password/forgot-password.controller.js";
+import { ForgotPasswordService } from "./modules/auth/forgot-password/forgot-password.service.js";
+import { LoginController } from "./modules/auth/login/login.controller.js";
+import { LoginService } from "./modules/auth/login/login.service.js";
+import { LogoutController } from "./modules/auth/logout/logout.controller.js";
+import { LogoutService } from "./modules/auth/logout/logout.service.js";
+import { RefreshController } from "./modules/auth/refresh-token/refresh.controller.js";
+import { RefreshService } from "./modules/auth/refresh-token/refresh.service.js";
+import { RegisterController } from "./modules/auth/register/register.controller.js";
+import { RegisterService } from "./modules/auth/register/register.service.js";
+import { ResetPasswordController } from "./modules/auth/reset-password/reset-password.controller.js";
+import { ResetPasswordService } from "./modules/auth/reset-password/reset-password.service.js";
 import { CloudinaryService } from "./modules/cloudinary/cloudinary.service.js";
-import { SampleController } from "./modules/sample/sample.controller.js";
-import { SampleRouter } from "./modules/sample/sample.router.js";
-import { SampleService } from "./modules/sample/sample.service.js";
 import { EventController } from "./modules/event/event.controller.js";
 import { EventRouter } from "./modules/event/event.router.js";
 import { EventService } from "./modules/event/event.service.js";
-import { globalError, notFoundError } from "./utils/error.js";
-import { RegisterService } from "./modules/auth/register/register.service.js";
-import { RegisterController } from "./modules/auth/register/register.controller.js";
-import { AuthRouter } from "./modules/auth/auth.router.js";
-import { LoginController } from "./modules/auth/login/login.controller.js";
-import { LoginService } from "./modules/auth/login/login.service.js";
-import "reflect-metadata";
 import { MailService } from "./modules/mail/mail.service.js";
-import { VoucherService } from "./modules/voucher/voucher.service.js";
-import { VoucherController } from "./modules/voucher/voucher.controller.js";
-import { VoucherRouter } from "./modules/voucher/voucher.router.js";
-import { TransactionService } from "./modules/transaction/transaction.service.js";
-import { TransactionController } from "./modules/transaction/transaction.controller.js";
-import { TransactionRouter } from "./modules/transaction/transaction.router.js";
-import { LogoutController } from "./modules/auth/logout/logout.controller.js";
-import { LogoutService } from "./modules/auth/logout/logout.service.js";
-import { RefreshService } from "./modules/auth/refresh-token/refresh.service.js";
-import { RefreshController } from "./modules/auth/refresh-token/refresh.controller.js";
-import { ForgotPasswordService } from "./modules/auth/forgot-password/forgot-password.service.js";
-import { ForgotPasswordController } from "./modules/auth/forgot-password/forgot-password.controller.js";
-import { ResetPasswordService } from "./modules/auth/reset-password/reset-password.service.js";
-import { ResetPasswordController } from "./modules/auth/reset-password/reset-password.controller.js";
-import { ReviewService } from "./modules/review/review.service.js";
-import { ReviewController } from "./modules/review/review.controller.js";
-import { ReviewRouter } from "./modules/review/review.router.js";
-import { ProfileService } from "./modules/profile/profile.service.js";
 import { ProfileController } from "./modules/profile/profile.controller.js";
 import { ProfileRouter } from "./modules/profile/profile.router.js";
-import { corsOptions } from "./config/cors.js";
+import { ProfileService } from "./modules/profile/profile.service.js";
+import { ReviewController } from "./modules/review/review.controller.js";
+import { ReviewRouter } from "./modules/review/review.router.js";
+import { ReviewService } from "./modules/review/review.service.js";
+import { SampleController } from "./modules/sample/sample.controller.js";
+import { SampleRouter } from "./modules/sample/sample.router.js";
+import { SampleService } from "./modules/sample/sample.service.js";
+import { TransactionController } from "./modules/transaction/transaction.controller.js";
+import { TransactionRouter } from "./modules/transaction/transaction.router.js";
+import { TransactionService } from "./modules/transaction/transaction.service.js";
+import { VoucherController } from "./modules/voucher/voucher.controller.js";
+import { VoucherRouter } from "./modules/voucher/voucher.router.js";
+import { VoucherService } from "./modules/voucher/voucher.service.js";
+import { globalError, notFoundError } from "./utils/error.js";
+import { DashboardService } from "./modules/dashboard/dashboard.service.js";
+import { DashboardController } from "./modules/dashboard/dashboard.controller.js";
+import { DashboardRouter } from "./modules/dashboard/dashboard.router.js";
 
 export class App {
   app: Express;
@@ -89,6 +92,7 @@ export class App {
       mailService,
     );
     const profileService = new ProfileService(prisma, cloudinaryService);
+    const dashboardService = new DashboardService(prisma);
 
     // Controller
     const registerController = new RegisterController(registerService);
@@ -106,6 +110,7 @@ export class App {
     const reviewController = new ReviewController(reviewService);
     const transactionController = new TransactionController(transactionService);
     const profileController = new ProfileController(profileService);
+    const dashboardController = new DashboardController(dashboardService, transactionService);
 
     // Middlewares
     const authMiddleware = new AuthMiddleware();
@@ -157,6 +162,12 @@ export class App {
       validationMiddleware,
     );
 
+    const dashboardRouter = new DashboardRouter(
+      dashboardController,
+      authMiddleware,
+      validationMiddleware
+    );
+
     // entry point
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
@@ -165,6 +176,7 @@ export class App {
     this.app.use("/transactions", transactionRouter.getRouter());
     this.app.use("/reviews", reviewRouter.getRouter());
     this.app.use("/profile", profileRouter.getRouter());
+    this.app.use("/dashboard", dashboardRouter.getRouter());
   }
 
   private errors() {

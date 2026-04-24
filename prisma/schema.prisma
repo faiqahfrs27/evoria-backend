@@ -103,6 +103,7 @@ model Event {
   vouchers       Voucher[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
   transactions   Transaction[]
   reviews        Review[]
 

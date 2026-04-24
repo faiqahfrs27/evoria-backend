@@ -27,6 +27,7 @@ export class EventService {
     } = query;
     const whereClause: Prisma.EventWhereInput = {
       startDate: { gte: new Date() },
+      deletedAt: null,
     };
 
     // Filter search by name event
@@ -69,7 +70,7 @@ export class EventService {
 
   getEventById = async (id: string) => {
     const event = await this.prisma.event.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: {
         organizer: { select: { id: true, name: true, email: true } },
         ticketTypes: true,
@@ -92,7 +93,7 @@ export class EventService {
     organizerId: string,
   ) => {
     const existing = await this.prisma.event.findFirst({
-      where: { name: body.name },
+      where: { name: body.name, deletedAt: null },
     });
     if (existing) throw new ApiError("Event name already in use", 400);
 
@@ -145,5 +146,18 @@ export class EventService {
     });
 
     return { message: "Create event success" };
+  };
+
+  deleteEvent = async (eventId: string, organizerId: string) => {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, organizerId, deletedAt: null },
+    });
+
+    if (!event) throw new ApiError("Event not found", 404);
+
+    return this.prisma.event.update({
+      where: { id: eventId },
+      data: { deletedAt: new Date() },
+    });
   };
 }

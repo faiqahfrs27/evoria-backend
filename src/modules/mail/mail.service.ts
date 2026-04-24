@@ -32,7 +32,11 @@ export class MailService {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
 
-    const templateDir = path.resolve(__dirname, "./templates");
+    const subFolder = templateName.startsWith("transaction")
+      ? "transaction-templates"
+      : "auth-templates";
+
+    const templateDir = path.resolve(__dirname, "./templates", subFolder);
     const templatePath = path.join(templateDir, `${templateName}.hbs`);
     const templateSource = await fs.readFile(templatePath, "utf-8");
     const compiledTemplate = handlebars.compile(templateSource);
