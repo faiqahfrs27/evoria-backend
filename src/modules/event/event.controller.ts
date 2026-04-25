@@ -26,6 +26,13 @@ export class EventController {
     }
   };
 
+ getEventBySlug = async (req: Request, res: Response) => {
+  const slug = req.params.slug as string;
+  const result = await this.eventService.getEventBySlug(slug);
+  res.status(200).send(result);
+};
+
+
   createEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = req.body;

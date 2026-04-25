@@ -45,7 +45,7 @@ export class EventService {
       whereClause.location = { contains: location, mode: "insensitive" };
     }
 
-    const events = await this.prisma.event.findMany({
+  const events = await this.prisma.event.findMany({
       where: whereClause,
       take: take,
       skip: (page - 1) * take,
@@ -84,6 +84,23 @@ export class EventService {
     });
 
     if (!event) throw new ApiError("Event not found", 404);
+    return event;
+  };
+
+  getEventBySlug = async (slug: string) => {
+    const event = await this.prisma.event.findUnique({
+      where: { slug },
+      include: {
+        organizer: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!event) throw new ApiError("event not found", 404);
+
     return event;
   };
 

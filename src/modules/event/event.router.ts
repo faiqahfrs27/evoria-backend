@@ -28,7 +28,7 @@ export class EventRouter {
       this.eventController.getEvents
     );
 
-    this.router.get("/:id", this.eventController.getEventById);
+    this.router.get("/:slug",this.eventController.getEventBySlug);
 
     this.router.post(
       "/",
