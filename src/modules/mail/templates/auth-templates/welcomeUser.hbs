@@ -1,0 +1,68 @@
+<!-- welcomeUser.hbs (Event Organizer Version) -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Welcome to Evoria</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px; background-color:#f4f6f8;">
+      <tr>
+        <td align="center">
+          <table width="500" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+
+            <!-- Header -->
+            <tr>
+              <td style="background:linear-gradient(135deg, #4f46e5, #7c3aed); color:#ffffff; text-align:center; padding:30px;">
+                <h1 style="margin:0;">🚀 Welcome to Evoria</h1>
+                <p style="margin-top:10px;">Create. Manage. Grow your events.</p>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td style="padding:30px; color:#333;">
+                <p style="font-size:16px;">Hi <strong>{{name}}</strong>,</p>
+
+                <p style="font-size:15px; line-height:1.6;">
+                  Your organizer account has been successfully created! 🎉  
+                  You're now ready to start creating and managing events on <strong>Evoria</strong>.
+                </p>
+
+                <p style="font-size:15px; line-height:1.6;">
+                  Whether you're hosting workshops, concerts, or exclusive experiences, 
+                  Evoria provides the tools you need to reach your audience and grow your event business.
+                </p>
+
+                <!-- CTA -->
+                <div style="text-align:center; margin:30px 0;">
+                  <a href="{{dashboard_link}}" 
+                     style="background:#4f46e5; color:#ffffff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block;">
+                    Go to Dashboard
+                  </a>
+                </div>
+
+                <p style="font-size:14px; color:#666;">
+                  Start by creating your first event and bring your ideas to life 🚀
+                </p>
+
+                <p style="margin-top:30px;">
+                  Best regards,<br/>
+                  <strong>The Evoria Team</strong>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="background:#f9fafb; padding:20px; text-align:center; font-size:12px; color:#999;">
+                <p style="margin:0;">© 2026 Evoria. All rights reserved.</p>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

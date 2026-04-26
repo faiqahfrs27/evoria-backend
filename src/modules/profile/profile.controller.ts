@@ -56,27 +56,48 @@ export class ProfileController {
     }
   };
 
-   getMyPoints = async (req: Request, res: Response, next: NextFunction) => {
+  getMyPoints = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = res.locals.user;
       const result = await this.profileService.getMyPoints(id);
       res.status(200).json({ data: result });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   };
- 
+
   getMyVouchers = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = res.locals.user;
       const result = await this.profileService.getMyVouchers(id);
       res.status(200).json({ data: result });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   };
- 
-  getMyTransactions = async (req: Request, res: Response, next: NextFunction) => {
+
+  getMyTransactions = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const { id } = res.locals.user;
       const result = await this.profileService.getMyTransactions(id);
       res.status(200).json({ data: result });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  validateCoupon = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = res.locals.user;
+      const { code } = req.body;
+      const result = await this.profileService.validateCoupon(id, code);
+      res.status(200).json({ data: result });
+    } catch (err) {
+      next(err);
+    }
   };
 }

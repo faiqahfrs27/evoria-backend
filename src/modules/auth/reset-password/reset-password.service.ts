@@ -7,53 +7,47 @@ import jwt from "jsonwebtoken";
 export class ResetPasswordService {
   constructor(private prisma: PrismaClient) {}
 
-  resetPassword = async (body: ResetPasswordDTO) => {
-    const { token, password } = body;
+  resetPassword = async (token: string, body: ResetPasswordDTO) => {
+    const { newPassword, confirmNewPassword } = body;
 
-    // 1. verify JWT token
-    let payload: any;
-    try {
-      payload = jwt.verify(token, process.env.JWT_SECRET_RESET!);
-    } catch (err) {
-      throw new ApiError("Token invalid", 400);
+    // validasi password
+    if (newPassword !== confirmNewPassword) {
+      throw new ApiError("Password does not match", 400);
     }
 
-    // 2. cek token di db
-    const storedToken = await this.prisma.passwordResetToken.findFirst({
+    // verify JWT
+    let payload: { id: string };
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET_RESET!) as {
+        id: string;
+      };
+    } catch {
+      throw new ApiError("Invalid or expired token", 400);
+    }
+
+    // cek token di DB
+    const storedToken = await this.prisma.passwordResetToken.findUnique({
       where: { token },
     });
 
-    if (!storedToken) {
-      throw new ApiError("Invalid token", 400);
+    if (!storedToken || storedToken.expiredAt < new Date()) {
+      throw new ApiError("Invalid or expired token", 400);
     }
 
-    if (storedToken.expiredAt < new Date()) {
-      throw new ApiError("Token expired", 400);
-    }
+    // hash password
+    const hashedPassword = await hash(newPassword);
 
-    // 3. cari user dari payload
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.id },
-    });
-
-    if (!user) {
-      throw new ApiError("user not found", 400);
-    }
-
-    // 4. hash password baru
-    const hashedPassword = await hash(password);
-
-    // 5. update password
+    // update password
     await this.prisma.user.update({
-      where: { id: user.id },
+      where: { id: payload.id },
       data: { password: hashedPassword },
     });
 
-    // 6. hapus token setelah dipakai (optional tapi penting)
-    await this.prisma.passwordResetToken.delete({
-      where: { id: storedToken.id },
+    // delete token(s)
+    await this.prisma.passwordResetToken.deleteMany({
+      where: { userId: payload.id },
     });
 
-    return { message: "reset password success" };
+    return { message: "Password updated successfully" };
   };
 }

@@ -63,8 +63,6 @@ export class EventService {
       where: whereClause,
     });
 
-    console.log(events, "ini eveents")
-
     return {
       data: events,
       meta: { page, take, total },

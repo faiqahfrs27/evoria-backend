@@ -136,16 +136,17 @@ model Point {
 }
 
 model Coupon {
-  id              String   @id @default(uuid())
-  userId          String   @db.Uuid
-  code            String   @unique
+  id              String        @id @default(uuid())
+  userId          String        @db.Uuid
+  code            String        @unique
   discountPercent Int
   source          String
-  eventId         String?  @db.Uuid
+  eventId         String?       @db.Uuid
   expiresAt       DateTime
-  isUsed          Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  user            User     @relation(fields: [userId], references: [id])
+  isUsed          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  transactions    Transaction[]
+  user            User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("coupons")
@@ -169,6 +170,7 @@ model Transaction {
   eventId         String            @db.Uuid
   ticketTypeId    String?           @db.Uuid
   voucherId       String?           @db.Uuid
+  couponId        String?
   status          TransactionStatus @default(WAITING_FOR_PAYMENT)
   quantity        Int               @default(1)
   basePrice       Int
@@ -182,6 +184,7 @@ model Transaction {
   event           Event             @relation(fields: [eventId], references: [id])
   ticketType      TicketType?       @relation(fields: [ticketTypeId], references: [id])
   voucher         Voucher?          @relation(fields: [voucherId], references: [id])
+  coupon          Coupon?           @relation(fields: [couponId], references: [id])
 
   @@map("transactions")
 }

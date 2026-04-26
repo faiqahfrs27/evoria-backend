@@ -59,11 +59,17 @@ export class ProfileRouter {
       this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.profileController.getMyVouchers,
     );
-    
+
     this.router.get(
       "/transactions",
       this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.profileController.getMyTransactions,
+    );
+
+    this.router.post(
+      "/coupons/validate",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.profileController.validateCoupon,
     );
   };
 

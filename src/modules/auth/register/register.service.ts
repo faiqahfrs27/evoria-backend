@@ -91,7 +91,7 @@ export class RegisterService {
           },
         });
 
-        try{
+        try {
           await tx.point.create({
             data: {
               userId: referrer.id,
@@ -101,9 +101,9 @@ export class RegisterService {
               isExpired: false,
             },
           });
-          console.log("POINT CREATED")
-        } catch(err){
-          console.error("POINT ERROR", err)
+          console.log("POINT CREATED");
+        } catch (err) {
+          console.error("POINT ERROR", err);
         }
 
         await tx.referralUsage.create({
@@ -131,14 +131,23 @@ export class RegisterService {
 
     if (result.referrer) {
       await this.mailService.sendMail({
-        to: result.referrer.email,
-        subject: "You Got a Referral Reward 🎉",
-        templateName: "referralReward",
+        to: result.newUser.email,
+        subject: "Your Welcome Coupon 🎁",
+        templateName: "welcomeCoupon",
         context: {
-          name: result.referrer.name,
-          points: REFERRAL_POINT,
-          referredUser: result.newUser.name,
+          name: result.newUser.name,
+          code: `WELCOME-${referralCode}`,
+          discount: DISCOUNT_REFERRAL,
           expiresAt: threeMonthsLater.toDateString(),
+        },
+      });
+    } else {
+      await this.mailService.sendMail({
+        to: result.newUser.email,
+        subject: "Welcome to Evoria! 🎉",
+        templateName: "welcomeUser", // ← buat template baru untuk welcome biasa
+        context: {
+          name: result.newUser.name,
         },
       });
     }

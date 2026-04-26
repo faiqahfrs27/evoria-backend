@@ -155,4 +155,15 @@ export class ProfileService {
       },
     });
   };
+
+  validateCoupon = async (userId: string, code: string) => {
+    const coupon = await this.prisma.coupon.findUnique({ where: { code } });
+    if (!coupon) throw new ApiError("Coupon not found", 404);
+    if (coupon.userId !== userId)
+      throw new ApiError("Coupon does not belong to you", 403);
+    if (coupon.isUsed) throw new ApiError("Coupon has already been used", 400);
+    if (new Date() > coupon.expiresAt)
+      throw new ApiError("Coupon has expired", 400);
+    return { code: coupon.code, discountPercent: coupon.discountPercent };
+  };
 }

@@ -20,6 +20,10 @@ export class CreateTransactionDTO {
   voucherId?: string;
 
   @IsOptional()
+  @IsString()
+  couponCode?: string;
+
+  @IsOptional()
   @IsNumberString()
   pointUsed?: string; // form-data kirim sebagai string
 

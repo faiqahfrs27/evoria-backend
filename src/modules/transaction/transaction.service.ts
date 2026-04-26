@@ -16,49 +16,57 @@ export class TransactionService {
     private mailService: MailService,
   ) {}
 
-  // ── HELPER: Rollback seat, voucher, poin ──────────────────
+  // ── HELPER: Rollback seat, voucher, coupon, poin ──────────
   rollbackTransaction = async (transactionId: string) => {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
-      include: { voucher: true },
+      include: { voucher: true, coupon: true },
     });
+
     if (!transaction) return;
 
-    await this.prisma.$transaction(async (tx) => {
-      // 1. Kembalikan available seats
-      await tx.event.update({
-        where: { id: transaction.eventId },
-        data: { availableSeats: { increment: transaction.quantity } },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.event.update({
+          where: { id: transaction.eventId },
+          data: { availableSeats: { increment: transaction.quantity } },
+        });
+
+        if (transaction.ticketTypeId) {
+          await tx.ticketType.update({
+            where: { id: transaction.ticketTypeId },
+            data: { quota: { increment: transaction.quantity } },
+          });
+        }
+
+        if (transaction.voucherId) {
+          await tx.voucher.update({
+            where: { id: transaction.voucherId },
+            data: { usedCount: { decrement: 1 } },
+          });
+        }
+
+        if (transaction.couponId) {
+          await tx.coupon.update({
+            where: { id: transaction.couponId },
+            data: { isUsed: false },
+          });
+        }
+
+        if (transaction.pointUsed > 0) {
+          await tx.point.create({
+            data: {
+              userId: transaction.customerId,
+              amount: transaction.pointUsed,
+              source: "refund",
+              expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+            },
+          });
+        }
       });
-
-      // 2. Kembalikan quota ticketType
-      if (transaction.ticketTypeId) {
-        await tx.ticketType.update({
-          where: { id: transaction.ticketTypeId },
-          data: { quota: { increment: transaction.quantity } },
-        });
-      }
-
-      // 3. Kembalikan usedCount voucher
-      if (transaction.voucherId) {
-        await tx.voucher.update({
-          where: { id: transaction.voucherId },
-          data: { usedCount: { decrement: 1 } },
-        });
-      }
-
-      // 4. Kembalikan poin yang dipakai
-      if (transaction.pointUsed > 0) {
-        await tx.point.create({
-          data: {
-            userId: transaction.customerId,
-            amount: transaction.pointUsed,
-            source: "refund",
-            expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 3 bulan
-          },
-        });
-      }
-    });
+    } catch (error) {
+      console.error("[ROLLBACK] ERROR:", error);
+    }
   };
 
   // ── 1. CREATE TRANSACTION ─────────────────────────────────
@@ -70,6 +78,7 @@ export class TransactionService {
       eventId,
       ticketTypeId,
       voucherId,
+      couponCode,
       quantity,
       pointUsed = "0",
     } = body;
@@ -101,7 +110,7 @@ export class TransactionService {
       basePrice = ticketType.price * Number(quantity);
     }
 
-    // 5. Hitung diskon voucher
+    // 5. Hitung diskon voucher (dari organizer, spesifik event)
     let discountVoucher = 0;
     if (voucherId) {
       const voucher = await this.prisma.voucher.findUnique({
@@ -121,8 +130,27 @@ export class TransactionService {
       discountVoucher = voucher.discountAmount;
     }
 
-    // 6. Hitung diskon poin
-    // Cek total poin customer yang belum expired
+    //Hitung diskon coupon (dari sistem/referral, berlaku semua event)
+    let discountCoupon = 0;
+    let coupon = null;
+    if (couponCode) {
+      coupon = await this.prisma.coupon.findUnique({
+        where: { code: couponCode },
+      });
+      if (!coupon) throw new ApiError("Coupon not found", 404);
+      if (coupon.userId !== customerId) {
+        throw new ApiError("Coupon does not belong to you", 403);
+      }
+      if (coupon.isUsed)
+        throw new ApiError("Coupon has already been used", 400);
+      if (new Date() > coupon.expiresAt)
+        throw new ApiError("Coupon has expired", 400);
+
+      // Hitung diskon persen dari basePrice
+      discountCoupon = Math.floor(basePrice * (coupon.discountPercent / 100));
+    }
+
+    // 7. Hitung diskon poin
     const customerPoints = await this.prisma.point.findMany({
       where: {
         userId: customerId,
@@ -140,15 +168,15 @@ export class TransactionService {
       );
     }
 
-    // 7. Hitung harga final
-    let finalPrice = basePrice - discountVoucher - pointToUse;
+    // 8. Hitung harga final
+    let finalPrice = basePrice - discountVoucher - discountCoupon - pointToUse;
     if (finalPrice < 0) finalPrice = 0;
 
-    // 8. Set deadline pembayaran 2 jam dari sekarang
+    // 9. Set deadline pembayaran 2 jam dari sekarang
     const paymentDeadline = new Date();
     paymentDeadline.setHours(paymentDeadline.getHours() + 2);
 
-    // 9. Buat transaksi dalam 1 DB transaction (atomic)
+    // 10. Buat transaksi dalam 1 DB transaction (atomic)
     const transaction = await this.prisma.$transaction(async (tx) => {
       // Kurangi available seats
       await tx.event.update({
@@ -169,6 +197,14 @@ export class TransactionService {
         await tx.voucher.update({
           where: { id: voucherId },
           data: { usedCount: { increment: 1 } },
+        });
+      }
+
+      // Mark coupon used
+      if (coupon) {
+        await tx.coupon.update({
+          where: { id: coupon.id },
+          data: { isUsed: true },
         });
       }
 
@@ -197,6 +233,7 @@ export class TransactionService {
           eventId,
           ticketTypeId: ticketTypeId || null,
           voucherId: voucherId || null,
+          couponId: coupon?.id || null, // ✅ simpan couponId
           quantity: Number(quantity),
           basePrice,
           finalPrice,
@@ -214,7 +251,7 @@ export class TransactionService {
       });
     });
 
-    // 10. Kirim email notifikasi ke customer
+    // 11. Kirim email notifikasi ke customer
     await this.mailService.sendMail({
       to: transaction.customer.email,
       subject: "Transaksi Berhasil Dibuat - Segera Lakukan Pembayaran",
@@ -246,14 +283,12 @@ export class TransactionService {
     });
 
     if (!transaction) throw new ApiError("Transaction not found", 404);
-    if (transaction.customerId !== customerId) {
+    if (transaction.customerId !== customerId)
       throw new ApiError("Forbidden", 403);
-    }
     if (transaction.status !== TransactionStatus.WAITING_FOR_PAYMENT) {
       throw new ApiError("Transaction is not waiting for payment", 400);
     }
 
-    // Cek apakah sudah expired
     if (new Date() > transaction.paymentDeadline) {
       await this.rollbackTransaction(transactionId);
       await this.prisma.transaction.update({
@@ -266,7 +301,6 @@ export class TransactionService {
       );
     }
 
-    // Upload bukti bayar ke Cloudinary
     const { secure_url } = await this.cloudinaryService.upload(file);
 
     const updated = await this.prisma.transaction.update({
@@ -277,7 +311,6 @@ export class TransactionService {
       },
     });
 
-    // Kirim email notifikasi
     await this.mailService.sendMail({
       to: transaction.customer.email,
       subject: "Bukti Pembayaran Diterima - Menunggu Konfirmasi",
@@ -306,9 +339,8 @@ export class TransactionService {
     });
 
     if (!transaction) throw new ApiError("Transaction not found", 404);
-    if (transaction.customerId !== customerId) {
+    if (transaction.customerId !== customerId)
       throw new ApiError("Forbidden", 403);
-    }
     if (transaction.status !== TransactionStatus.WAITING_FOR_PAYMENT) {
       throw new ApiError(
         "Only transactions waiting for payment can be canceled",
@@ -323,7 +355,6 @@ export class TransactionService {
       data: { status: TransactionStatus.CANCELED },
     });
 
-    // Kirim email notifikasi
     await this.mailService.sendMail({
       to: transaction.customer.email,
       subject: "Transaksi Dibatalkan",
@@ -367,11 +398,10 @@ export class TransactionService {
     });
 
     const total = await this.prisma.transaction.count({ where: whereClause });
-
     return { data: transactions, meta: { page, take, total } };
   };
 
-  // ── GET TRANSACTION DETAIL ──────────────────────────────
+  // ── GET TRANSACTION DETAIL ────────────────────────────────
   getTransactionDetail = async (transactionId: string, customerId: string) => {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
@@ -385,34 +415,18 @@ export class TransactionService {
             startDate: true,
             endDate: true,
             imageUrl: true,
-            organizer: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
+            organizer: { select: { id: true, name: true, email: true } },
           },
         },
         ticketType: true,
         voucher: true,
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        customer: { select: { id: true, name: true, email: true } },
       },
     });
 
-    if (!transaction) {
-      throw new ApiError("Transaction not found", 404);
-    }
-
-    if (transaction.customerId !== customerId) {
+    if (!transaction) throw new ApiError("Transaction not found", 404);
+    if (transaction.customerId !== customerId)
       throw new ApiError("Forbidden", 403);
-    }
 
     return transaction;
   };
@@ -435,9 +449,8 @@ export class TransactionService {
     });
 
     if (!transaction) throw new ApiError("Transaction not found", 404);
-    if (transaction.event.organizerId !== organizerId) {
+    if (transaction.event.organizerId !== organizerId)
       throw new ApiError("Forbidden", 403);
-    }
     if (
       transaction.status !== TransactionStatus.WAITING_FOR_ADMIN_CONFIRMATION
     ) {
@@ -449,7 +462,6 @@ export class TransactionService {
       data: { status: TransactionStatus.DONE },
     });
 
-    // Kirim email notifikasi
     await this.mailService.sendMail({
       to: transaction.customer.email,
       subject: "🎉 Pembayaran Dikonfirmasi!",
@@ -477,9 +489,8 @@ export class TransactionService {
     });
 
     if (!transaction) throw new ApiError("Transaction not found", 404);
-    if (transaction.event.organizerId !== organizerId) {
+    if (transaction.event.organizerId !== organizerId)
       throw new ApiError("Forbidden", 403);
-    }
     if (
       transaction.status !== TransactionStatus.WAITING_FOR_ADMIN_CONFIRMATION
     ) {
@@ -493,7 +504,6 @@ export class TransactionService {
       data: { status: TransactionStatus.REJECTED },
     });
 
-    // Kirim email notifikasi
     await this.mailService.sendMail({
       to: transaction.customer.email,
       subject: "❌ Pembayaran Ditolak",
@@ -527,9 +537,7 @@ export class TransactionService {
       where: { id: eventId },
     });
     if (!event) throw new ApiError("Event not found", 404);
-    if (event.organizerId !== organizerId) {
-      throw new ApiError("Forbidden", 403);
-    }
+    if (event.organizerId !== organizerId) throw new ApiError("Forbidden", 403);
 
     const whereClause: Prisma.TransactionWhereInput = { eventId };
     if (status) whereClause.status = status as TransactionStatus;
@@ -547,7 +555,6 @@ export class TransactionService {
     });
 
     const total = await this.prisma.transaction.count({ where: whereClause });
-
     return { data: transactions, meta: { page, take, total } };
   };
 }
