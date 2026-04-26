@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+  <h2>⏰ Transaksi Expired</h2>
+  <p>Halo <strong>{{customerName}}</strong>,</p>
+  <p>Transaksi kamu untuk event <strong>{{eventName}}</strong> telah expired karena tidak ada pembayaran dalam 2 jam.</p>
+  
+  {{#if pointUsed}}
+  <p>✅ <strong>{{pointUsed}} poin</strong> sudah dikembalikan ke akun kamu.</p>
+  {{/if}}
+
+  {{#if voucherCode}}
+  <p>✅ Voucher <strong>{{voucherCode}}</strong> sudah dikembalikan.</p>
+  {{/if}}
+
+  <p>Silakan buat transaksi baru jika masih ingin membeli tiket.</p>
+</body>
+</html>

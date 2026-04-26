@@ -2,14 +2,18 @@ import { verify } from "argon2";
 import { PrismaClient, User } from "../../../generated/prisma/client.js";
 import { ApiError } from "../../../utils/api-error.js";
 import jwt from "jsonwebtoken";
-import { EXPIRED_7_DAY, EXPIRED_ACCESS_TOKEN_JWT, EXPIRED_REFRESH_TOKEN_JWT } from "../constants.js";
+import {
+  EXPIRED_7_DAY,
+  EXPIRED_ACCESS_TOKEN_JWT,
+  EXPIRED_REFRESH_TOKEN_JWT,
+} from "../constants.js";
 import { LoginDTO } from "../dto/login.dto.js";
 
 export class LoginService {
   constructor(private prisma: PrismaClient) {}
 
   login = async (body: LoginDTO) => {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: {
         email: body.email,
         deletedAt: null, //soft delete
@@ -52,6 +56,6 @@ export class LoginService {
 
     const { password, ...userWithoutPassword } = user;
 
-    return { user: userWithoutPassword, accessToken };
+    return { user: userWithoutPassword, accessToken, refreshToken };
   };
 }

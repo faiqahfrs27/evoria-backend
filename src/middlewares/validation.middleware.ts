@@ -26,4 +26,23 @@ export class ValidationMiddleware {
       next();
     };
   };
+
+  validateQuery = (dtoClass: any) => {
+    return async (req: Request, _res: Response, next: NextFunction) => {
+      const dtoInstance = plainToInstance(dtoClass, req.query);
+      const errors = await validate(dtoInstance as any);
+
+      if (errors.length > 0) {
+        const message = errors
+          .map((error) => Object.values(error.constraints || {}))
+          .flat()
+          .join(", ");
+        return next(new ApiError(message, 400));
+      }
+
+      _res.locals.query = dtoInstance;
+      next();
+    };
+  };
 }
+

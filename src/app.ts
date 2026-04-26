@@ -1,22 +1,51 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { Express } from "express";
+import "reflect-metadata";
+import { corsOptions } from "./config/cors.js";
 import { prisma } from "./lib/prisma.js";
-import { SampleController } from "./modules/sample/sample.controller.js";
-import { SampleRouter } from "./modules/sample/sample.router.js";
-import { SampleService } from "./modules/sample/sample.service.js";
+import { AuthMiddleware } from "./middlewares/auth.middleware.js";
+import { UploadMiddleware } from "./middlewares/upload.middleware.js";
+import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
+import { AuthRouter } from "./modules/auth/auth.router.js";
+import { ForgotPasswordController } from "./modules/auth/forgot-password/forgot-password.controller.js";
+import { ForgotPasswordService } from "./modules/auth/forgot-password/forgot-password.service.js";
+import { LoginController } from "./modules/auth/login/login.controller.js";
+import { LoginService } from "./modules/auth/login/login.service.js";
+import { LogoutController } from "./modules/auth/logout/logout.controller.js";
+import { LogoutService } from "./modules/auth/logout/logout.service.js";
+import { RefreshController } from "./modules/auth/refresh-token/refresh.controller.js";
+import { RefreshService } from "./modules/auth/refresh-token/refresh.service.js";
+import { RegisterController } from "./modules/auth/register/register.controller.js";
+import { RegisterService } from "./modules/auth/register/register.service.js";
+import { ResetPasswordController } from "./modules/auth/reset-password/reset-password.controller.js";
+import { ResetPasswordService } from "./modules/auth/reset-password/reset-password.service.js";
+import { CloudinaryService } from "./modules/cloudinary/cloudinary.service.js";
 import { EventController } from "./modules/event/event.controller.js";
 import { EventRouter } from "./modules/event/event.router.js";
 import { EventService } from "./modules/event/event.service.js";
+import { MailService } from "./modules/mail/mail.service.js";
+import { ProfileController } from "./modules/profile/profile.controller.js";
+import { ProfileRouter } from "./modules/profile/profile.router.js";
+import { ProfileService } from "./modules/profile/profile.service.js";
+import { ReviewController } from "./modules/review/review.controller.js";
+import { ReviewRouter } from "./modules/review/review.router.js";
+import { ReviewService } from "./modules/review/review.service.js";
+import { SampleController } from "./modules/sample/sample.controller.js";
+import { SampleRouter } from "./modules/sample/sample.router.js";
+import { SampleService } from "./modules/sample/sample.service.js";
+import { TransactionController } from "./modules/transaction/transaction.controller.js";
+import { TransactionRouter } from "./modules/transaction/transaction.router.js";
+import { TransactionService } from "./modules/transaction/transaction.service.js";
+import { VoucherController } from "./modules/voucher/voucher.controller.js";
+import { VoucherRouter } from "./modules/voucher/voucher.router.js";
+import { VoucherService } from "./modules/voucher/voucher.service.js";
 import { globalError, notFoundError } from "./utils/error.js";
-import cookieParser from "cookie-parser";
-import { RegisterService } from "./modules/auth/register/register.service.js";
-import { RegisterController } from "./modules/auth/register/register.controller.js";
-import { AuthRouter } from "./modules/auth/auth.router.js";
-import { LoginController } from "./modules/auth/login/login.controller.js";
-import { LoginService } from "./modules/auth/login/login.service.js";
-import "reflect-metadata";
-import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
-import { AuthMiddleware } from "./middlewares/auth.middleware.js";
+import { DashboardService } from "./modules/dashboard/dashboard.service.js";
+import { DashboardController } from "./modules/dashboard/dashboard.controller.js";
+import { DashboardRouter } from "./modules/dashboard/dashboard.router.js";
+import { startTransactionJobs } from "./jobs/transaction.job.js";
+
 
 export class App {
   app: Express;
@@ -29,12 +58,11 @@ export class App {
   }
 
   private configure() {
-    this.app.use(cors());
+    this.app.use(cors(corsOptions));
     this.app.use(express.json());
-    this.app.use(cookieParser())
+    this.app.use(cookieParser());
   }
 
-  
   private registerModules() {
     // services
     const sampleService = new SampleService(prisma);
@@ -46,27 +74,113 @@ export class App {
     const sampleRouter = new SampleRouter(sampleController);
 
     // Services
-    const registerService = new RegisterService(prisma);
+    const mailService = new MailService();
+    const registerService = new RegisterService(prisma, mailService);
     const loginService = new LoginService(prisma);
-    const eventService = new EventService(prisma);
+    const logoutService = new LogoutService(prisma);
+    const refreshService = new RefreshService(prisma);
+    const forgotPasswordService = new ForgotPasswordService(
+      prisma,
+      mailService,
+    );
+    const resetPasswordService = new ResetPasswordService(prisma);
+    const cloudinaryService = new CloudinaryService();
+    const eventService = new EventService(prisma, cloudinaryService);
+    const voucherService = new VoucherService(prisma);
+    const reviewService = new ReviewService(prisma);
+    const transactionService = new TransactionService(
+      prisma,
+      cloudinaryService,
+      mailService,
+    );
+    const profileService = new ProfileService(prisma, cloudinaryService);
+    const dashboardService = new DashboardService(prisma);
 
     // Controller
     const registerController = new RegisterController(registerService);
     const loginController = new LoginController(loginService);
+    const logoutController = new LogoutController(logoutService);
+    const refreshController = new RefreshController(refreshService);
+    const forgotPasswordController = new ForgotPasswordController(
+      forgotPasswordService,
+    );
+    const resetPasswordController = new ResetPasswordController(
+      resetPasswordService,
+    );
     const eventController = new EventController(eventService);
+    const voucherController = new VoucherController(voucherService);
+    const reviewController = new ReviewController(reviewService);
+    const transactionController = new TransactionController(transactionService);
+    const profileController = new ProfileController(profileService);
+    const dashboardController = new DashboardController(dashboardService, transactionService);
 
     // Middlewares
-    const authMidlleware = new AuthMiddleware();
+    const authMiddleware = new AuthMiddleware();
+    const uploadMiddleware = new UploadMiddleware();
     const validationMiddleware = new ValidationMiddleware();
 
-    // Routes 
-    const authRouter = new AuthRouter(registerController, loginController, validationMiddleware);
-    const eventRouter = new EventRouter(eventController);
+    // Routes
+    const authRouter = new AuthRouter(
+      registerController,
+      loginController,
+      logoutController,
+      refreshController,
+      forgotPasswordController,
+      resetPasswordController,
+      validationMiddleware,
+      authMiddleware,
+    );
+
+    const eventRouter = new EventRouter(
+      eventController,
+      authMiddleware,
+      uploadMiddleware,
+      validationMiddleware,
+    );
+
+    const voucherRouter = new VoucherRouter(
+      voucherController,
+      authMiddleware,
+      validationMiddleware,
+    );
+
+    const transactionRouter = new TransactionRouter(
+      transactionController,
+      authMiddleware,
+      uploadMiddleware,
+      validationMiddleware,
+    );
+
+    const reviewRouter = new ReviewRouter(
+      reviewController,
+      authMiddleware,
+      validationMiddleware,
+    );
+
+    const profileRouter = new ProfileRouter(
+      profileController,
+      authMiddleware,
+      uploadMiddleware,
+      validationMiddleware,
+    );
+
+    const dashboardRouter = new DashboardRouter(
+      dashboardController,
+      profileController,
+      authMiddleware,
+      validationMiddleware,
+      uploadMiddleware,
+    );
 
     // entry point
     this.app.use("/auth", authRouter.getRouter());
     this.app.use("/samples", sampleRouter.getRouter());
     this.app.use("/events", eventRouter.getRouter());
+    this.app.use("/events/:eventId/vouchers", voucherRouter.getRouter());
+    this.app.use("/transactions", transactionRouter.getRouter());
+    this.app.use("/reviews", reviewRouter.getRouter());
+    this.app.use("/profile", profileRouter.getRouter());
+    this.app.use("/dashboard", dashboardRouter.getRouter());
   }
 
   private errors() {
@@ -75,10 +189,11 @@ export class App {
   }
 
   start() {
-    const PORT = Number(process.env.PORT) || 8000;
+    const PORT = Number(process.env.PORT);
 
     this.app.listen(PORT, () => {
       console.log(`Server running on port: ${PORT}`);
+      startTransactionJobs();
     });
   }
 }

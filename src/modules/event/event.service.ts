@@ -1,91 +1,79 @@
-import { PrismaClient, EventCategory } from "../../generated/prisma/client.js";
+import {
+  Prisma,
+  PrismaClient,
+  EventCategory,
+} from "../../generated/prisma/client.js";
 import { ApiError } from "../../utils/api-error.js";
-
-interface GetEventsQuery {
-  search?: string;
-  category?: string;
-  location?: string;
-  page?: number;
-  limit?: number;
-}
-
-interface CreateEventBody {
-  name: string;
-  description: string;
-  category: string;
-  location: string;
-  startDate: string;
-  endDate: string;
-  price: number;
-  isFree: boolean;
-  availableSeats: number;
-  totalSeats: number;
-  imageUrl?: string;
-  ticketTypes?: { name: string; price: number; quota: number }[];
-}
-
-interface UpdateEventBody extends Partial<CreateEventBody> {}
+import { generateSlug } from "../../utils/generate-slug.js";
+import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
+import { CreateEventDTO } from "./dto/create-event.dto.js";
+import { GetEventDTO } from "./dto/get-event.dto.js";
+import { UpdateEventDTO } from "./dto/update-event.dto.js";
 
 export class EventService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
-  getEvents = async (query: GetEventsQuery) => {
-    const { search, category, location, page = 1, limit = 10 } = query;
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const where: any = {
-      startDate: { gte: new Date() },
+  getEvent = async (query: GetEventDTO) => {
+    const {
+      page = 1,
+      take = 5,
+      sortBy = "startDate",
+      sortOrder = "asc",
+      search,
+      category,
+      location,
+    } = query;
+    const whereClause: Prisma.EventWhereInput = {
+      endDate: { gte: new Date() },
+      deletedAt: null,
     };
 
+    // Filter search by name event
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ];
+      whereClause.name = { contains: search, mode: "insensitive" };
     }
 
+    // Filter by category
     if (category) {
-      where.category = category as EventCategory;
+      whereClause.category = category as EventCategory;
     }
 
+    // Filter by location
     if (location) {
-      where.location = { contains: location, mode: "insensitive" };
+      whereClause.location = { contains: location, mode: "insensitive" };
     }
 
-    const [events, total] = await Promise.all([
-      this.prisma.event.findMany({
-        where,
-        skip,
-        take: Number(limit),
-        orderBy: { startDate: "asc" },
-        include: {
-          organizer: {
-            select: { id: true, name: true, email: true },
-          },
-          ticketTypes: true,
+    const events = await this.prisma.event.findMany({
+      where: whereClause,
+      take: take,
+      skip: (page - 1) * take,
+      orderBy: { [sortBy]: sortOrder },
+      include: {
+        organizer: {
+          select: { id: true, name: true },
         },
-      }),
-      this.prisma.event.count({ where }),
-    ]);
+        ticketTypes: true,
+      },
+    });
+
+    const total = await this.prisma.event.count({
+      where: whereClause,
+    });
 
     return {
       data: events,
-      meta: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / Number(limit)),
-      },
+      meta: { page, take, total },
     };
   };
 
   getEventById = async (id: string) => {
     const event = await this.prisma.event.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: {
-        organizer: {
-          select: { id: true, name: true, email: true },
-        },
+        organizer: { select: { id: true, name: true, email: true } },
         ticketTypes: true,
         vouchers: {
           where: {
@@ -96,79 +84,151 @@ export class EventService {
       },
     });
 
-    if (!event) {
-      throw new ApiError("Event not found", 404);
-    }
+    if (!event) throw new ApiError("Event not found", 404);
+    return event;
+  };
+
+  getEventBySlug = async (slug: string) => {
+    const event = await this.prisma.event.findUnique({
+      where: { slug },
+      include: {
+        organizer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePic: true,
+          },
+        },
+        ticketTypes: true,
+        vouchers: true,
+      },
+    });
+
+    if (!event) throw new ApiError("event not found", 404);
 
     return event;
   };
 
-  createEvent = async (organizerId: string, body: CreateEventBody) => {
-    const { ticketTypes, ...eventData } = body;
+  createEvent = async (
+    body: CreateEventDTO,
+    thumbnail: Express.Multer.File | undefined,
+    organizerId: string,
+  ) => {
+    const existing = await this.prisma.event.findFirst({
+      where: { name: body.name, deletedAt: null },
+    });
+    if (existing) throw new ApiError("Event name already in use", 400);
 
-    const event = await this.prisma.event.create({
+    const slug = generateSlug(body.name);
+
+    let imageUrl: string | null = null;
+    if (thumbnail) {
+      const { secure_url } = await this.cloudinaryService.upload(thumbnail);
+      imageUrl = secure_url;
+    }
+
+    let parsedTicketTypes: { name: string; price: number; quota: number }[] =
+      [];
+    if ((body as any).ticketTypes) {
+      try {
+        parsedTicketTypes = JSON.parse((body as any).ticketTypes);
+      } catch {
+        throw new ApiError(
+          "Invalid ticketTypes format, must be valid JSON",
+          400,
+        );
+      }
+    }
+
+    await this.prisma.event.create({
       data: {
-        ...eventData,
-        category: eventData.category as EventCategory,
-        startDate: new Date(eventData.startDate),
-        endDate: new Date(eventData.endDate),
-        price: eventData.isFree ? 0 : Number(eventData.price),
+        name: body.name,
+        slug,
+        description: body.description,
+        category: body.category,
+        location: body.location,
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+        isFree: body.isFree === "true",
+        price: body.isFree === "true" ? 0 : Number(body.price),
+        availableSeats: Number(body.availableSeats),
+        totalSeats: Number(body.totalSeats),
+        imageUrl,
         organizerId,
-        ticketTypes: ticketTypes
-          ? { create: ticketTypes }
+        ticketTypes: parsedTicketTypes
+          ? {
+              create: parsedTicketTypes.map((t: any) => ({
+                name: t.name,
+                price: Number(t.price),
+                quota: Number(t.quota),
+              })),
+            }
           : undefined,
       },
-      include: { ticketTypes: true },
     });
 
-    return event;
+    return { message: "Create event success" };
   };
 
-  updateEvent = async (id: string, organizerId: string, body: UpdateEventBody) => {
-    const existing = await this.prisma.event.findUnique({ where: { id } });
+  updateEvent = async (
+    eventId: string,
+    organizerId: string,
+    body: UpdateEventDTO,
+    thumbnail?: Express.Multer.File,
+  ) => {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, organizerId, deletedAt: null },
+    });
 
-    if (!existing) throw new ApiError("Event not found", 404);
-    if (existing.organizerId !== organizerId) {
-      throw new ApiError("Forbidden: You don't own this event", 403);
+    if (!event) throw new ApiError("Event not found", 404);
+
+    // Upload gambar baru kalau ada
+    let imageUrl = event.imageUrl;
+    if (thumbnail) {
+      if (event.imageUrl) {
+        await this.cloudinaryService.removeByUrl(event.imageUrl);
+      }
+      const { secure_url } = (await this.cloudinaryService.upload(
+        thumbnail,
+      )) as { secure_url: string };
+      imageUrl = secure_url;
     }
+    // Regenerate slug kalau name berubah
+    const slug = body.name ? generateSlug(body.name) : event.slug;
 
-    const { ticketTypes, ...eventData } = body;
-
-    const updated = await this.prisma.event.update({
-      where: { id },
+    return this.prisma.event.update({
+      where: { id: eventId },
       data: {
-        ...eventData,
-        category: eventData.category
-          ? (eventData.category as EventCategory)
-          : undefined,
-        startDate: eventData.startDate
-          ? new Date(eventData.startDate)
-          : undefined,
-        endDate: eventData.endDate
-          ? new Date(eventData.endDate)
-          : undefined,
-        price:
-          eventData.isFree !== undefined
-            ? eventData.isFree
-              ? 0
-              : Number(eventData.price)
-            : undefined,
+        ...(body.name && { name: body.name, slug }),
+        ...(body.description && { description: body.description }),
+        ...(body.category && { category: body.category}),
+        ...(body.location && { location: body.location }),
+        ...(body.startDate && { startDate: new Date(body.startDate) }),
+        ...(body.endDate && { endDate: new Date(body.endDate) }),
+        ...(body.isFree !== undefined && { isFree: body.isFree === "true" }),
+        ...(body.price !== undefined && {
+          price: body.isFree === "true" ? 0 : Number(body.price),
+        }),
+        ...(body.availableSeats && {
+          availableSeats: Number(body.availableSeats),
+        }),
+        ...(body.totalSeats && { totalSeats: Number(body.totalSeats) }),
+        imageUrl,
       },
-      include: { ticketTypes: true },
     });
-
-    return updated;
   };
 
-  deleteEvent = async (id: string, organizerId: string) => {
-    const existing = await this.prisma.event.findUnique({ where: { id } });
+  deleteEvent = async (eventId: string, organizerId: string) => {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, organizerId, deletedAt: null },
+    });
 
-    if (!existing) throw new ApiError("Event not found", 404);
-    if (existing.organizerId !== organizerId) {
-      throw new ApiError("Forbidden: You don't own this event", 403);
-    }
+    if (!event) throw new ApiError("Event not found", 404);
 
-    await this.prisma.event.delete({ where: { id } });
-    return { message: "Event deleted successfully" };
+    return this.prisma.event.update({
+      where: { id: eventId },
+      data: { deletedAt: new Date() },
+    });
   };
 }
