@@ -4,13 +4,21 @@ import { ValidationMiddleware } from "../../middlewares/validation.middleware.js
 import { DashboardController } from "./dashboard.controller.js";
 import { Router } from "express";
 import { GetStatisticsDTO } from "./dto/dashboard.dto.js";
+import { ProfileController } from "../profile/profile.controller.js";
+import { UploadMiddleware } from "../../middlewares/upload.middleware.js";
+import {
+  ChangePasswordDTO,
+  UpdateProfileDTO,
+} from "../profile/dto/profile.dto.js";
 
 export class DashboardRouter {
-    router: Router;
+  router: Router;
   constructor(
     private dashboardController: DashboardController,
+    private profileController: ProfileController,
     private authMiddleware: AuthMiddleware,
     private validationMiddleware: ValidationMiddleware,
+    private uploadMiddleware: UploadMiddleware,
   ) {
     this.router = Router();
     this.initRoutes();
@@ -64,7 +72,38 @@ export class DashboardRouter {
       ...organizerOnly,
       this.dashboardController.getAttendeeList,
     );
-  }
+
+    // GET /dashboard/organizer/profile
+    this.router.get(
+      "/organizer/profile",
+      ...organizerOnly,
+      this.profileController.getProfile,
+    );
+
+    // PUT /dashboard/organizer/profile
+    this.router.put(
+      "/organizer/profile",
+      ...organizerOnly,
+      this.validationMiddleware.validateBody(UpdateProfileDTO),
+      this.profileController.updateProfile,
+    );
+
+    // PATCH /dashboard/organizer/profile/picture
+    this.router.patch(
+      "/organizer/profile/picture",
+      ...organizerOnly,
+      this.uploadMiddleware.upload().single("profilePic"),
+      this.profileController.updateProfilePic,
+    );
+
+    // PUT /dashboard/organizer/change-password
+    this.router.put(
+      "/organizer/profile/change-password",
+      ...organizerOnly,
+      this.validationMiddleware.validateBody(ChangePasswordDTO),
+      this.profileController.changePassword,
+    );
+  };
 
   getRouter = () => {
     return this.router;

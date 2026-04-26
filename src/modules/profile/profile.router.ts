@@ -36,7 +36,7 @@ export class ProfileRouter {
 
     this.router.patch(
       "/picture",
-      this.authMiddleware.verifyToken((process.env.JWT_SECRET!)),
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.uploadMiddleware.upload().single("profilePic"),
       this.profileController.updateProfilePic,
     );
@@ -46,6 +46,24 @@ export class ProfileRouter {
       this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.validationMiddleware.validateBody(ChangePasswordDTO),
       this.profileController.changePassword,
+    );
+
+    this.router.get(
+      "/points",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.profileController.getMyPoints,
+    );
+
+    this.router.get(
+      "/vouchers",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.profileController.getMyVouchers,
+    );
+    
+    this.router.get(
+      "/transactions",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.profileController.getMyTransactions,
     );
   };
 

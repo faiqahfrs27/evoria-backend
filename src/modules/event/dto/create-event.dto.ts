@@ -1,15 +1,13 @@
 import {
-  IsArray,
   IsBooleanString,
   IsDateString,
-  IsIn,
+  IsEnum,
   IsNotEmpty,
   IsNumberString,
   IsOptional,
   IsString,
 } from "class-validator";
-import { Transform, Type } from "class-transformer";
-import { TicketTypeDTO } from "./ticket-type.dto.js";
+import { EventCategory } from "../../../generated/prisma/enums.js";
 
 export class CreateEventDTO {
   @IsNotEmpty()
@@ -22,8 +20,8 @@ export class CreateEventDTO {
 
   @IsNotEmpty()
   @IsString()
-  @IsIn(["MUSIC", "SPORTS", "TECHNOLOGY", "FOOD", "ART", "EDUCATION", "OTHER"])
-  category!: string;
+  @IsEnum(EventCategory, { message: "Invalid category" })
+  category!: EventCategory;
 
   @IsNotEmpty()
   @IsString()
@@ -52,5 +50,4 @@ export class CreateEventDTO {
   @IsNotEmpty()
   @IsNumberString()
   totalSeats!: string;
-
 }

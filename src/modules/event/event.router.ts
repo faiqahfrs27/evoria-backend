@@ -6,6 +6,7 @@ import { ValidationMiddleware } from "../../middlewares/validation.middleware.js
 import { Role } from "../../generated/prisma/enums.js";
 import { CreateEventDTO } from "./dto/create-event.dto.js";
 import { GetEventDTO } from "./dto/get-event.dto.js";
+import { UpdateEventDTO } from "./dto/update-event.dto.js";
 
 export class EventRouter {
   router: Router;
@@ -14,7 +15,7 @@ export class EventRouter {
     private eventController: EventController,
     private authMiddleware: AuthMiddleware,
     private uploadMiddleware: UploadMiddleware,
-    private validationMiddleware: ValidationMiddleware
+    private validationMiddleware: ValidationMiddleware,
   ) {
     this.router = Router();
     this.initRoutes();
@@ -23,10 +24,7 @@ export class EventRouter {
   private initRoutes = () => {
     const JWT_SECRET = process.env.JWT_SECRET as string;
 
-    this.router.get(
-      "/",
-      this.eventController.getEvents
-    );
+    this.router.get("/", this.eventController.getEvents);
 
     this.router.get("/:slug",this.eventController.getEventBySlug);
 
@@ -38,7 +36,23 @@ export class EventRouter {
         .upload()
         .fields([{ name: "thumbnail", maxCount: 1 }]),
       this.validationMiddleware.validateBody(CreateEventDTO),
-      this.eventController.createEvent
+      this.eventController.createEvent,
+    );
+
+    this.router.patch(
+      "/:eventId",
+      this.authMiddleware.verifyToken(JWT_SECRET),
+      this.authMiddleware.verifyRole([Role.ORGANIZER]),
+      this.uploadMiddleware.upload().single("thumbnail"),
+      this.validationMiddleware.validateBody(UpdateEventDTO),
+      this.eventController.updateEvent,
+    );
+
+    this.router.delete(
+      "/:eventId",
+      this.authMiddleware.verifyToken(JWT_SECRET),
+      this.authMiddleware.verifyRole([Role.ORGANIZER]),
+      this.eventController.deleteEvent,
     );
   };
 

@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from "express";
-import { EventService } from "./event.service.js";
 import { plainToInstance } from "class-transformer";
+import { NextFunction, Request, Response } from "express";
 import { GetEventDTO } from "./dto/get-event.dto.js";
+import { EventService } from "./event.service.js";
 
 export class EventController {
   constructor(private eventService: EventService) {}
@@ -56,6 +56,34 @@ export class EventController {
       );
 
       res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateEvent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = res.locals.user;
+      const eventId = req.params.eventId as string;
+      const file = req.file as Express.Multer.File | undefined;
+      const result = await this.eventService.updateEvent(
+        eventId,
+        id,
+        req.body,
+        file,
+      );
+      res.status(200).json({ message: "Event updated", data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteEvent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = res.locals.user;
+      const eventId = req.params.eventId as string;
+      const result = await this.eventService.deleteEvent(eventId, id);
+      res.status(200).json({ message: "Event deleted", data: result });
     } catch (error) {
       next(error);
     }

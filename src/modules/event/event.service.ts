@@ -8,6 +8,7 @@ import { generateSlug } from "../../utils/generate-slug.js";
 import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
 import { CreateEventDTO } from "./dto/create-event.dto.js";
 import { GetEventDTO } from "./dto/get-event.dto.js";
+import { UpdateEventDTO } from "./dto/update-event.dto.js";
 
 export class EventService {
   constructor(
@@ -26,7 +27,7 @@ export class EventService {
       location,
     } = query;
     const whereClause: Prisma.EventWhereInput = {
-      startDate: { gte: new Date() },
+      endDate: { gte: new Date() },
       deletedAt: null,
     };
 
@@ -61,6 +62,8 @@ export class EventService {
     const total = await this.prisma.event.count({
       where: whereClause,
     });
+
+    console.log(events, "ini eveents")
 
     return {
       data: events,
@@ -145,7 +148,7 @@ export class EventService {
         name: body.name,
         slug,
         description: body.description,
-        category: body.category as EventCategory,
+        category: body.category,
         location: body.location,
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
@@ -168,6 +171,54 @@ export class EventService {
     });
 
     return { message: "Create event success" };
+  };
+
+  updateEvent = async (
+    eventId: string,
+    organizerId: string,
+    body: UpdateEventDTO,
+    thumbnail?: Express.Multer.File,
+  ) => {
+    const event = await this.prisma.event.findFirst({
+      where: { id: eventId, organizerId, deletedAt: null },
+    });
+
+    if (!event) throw new ApiError("Event not found", 404);
+
+    // Upload gambar baru kalau ada
+    let imageUrl = event.imageUrl;
+    if (thumbnail) {
+      if (event.imageUrl) {
+        await this.cloudinaryService.removeByUrl(event.imageUrl);
+      }
+      const { secure_url } = (await this.cloudinaryService.upload(
+        thumbnail,
+      )) as { secure_url: string };
+      imageUrl = secure_url;
+    }
+    // Regenerate slug kalau name berubah
+    const slug = body.name ? generateSlug(body.name) : event.slug;
+
+    return this.prisma.event.update({
+      where: { id: eventId },
+      data: {
+        ...(body.name && { name: body.name, slug }),
+        ...(body.description && { description: body.description }),
+        ...(body.category && { category: body.category}),
+        ...(body.location && { location: body.location }),
+        ...(body.startDate && { startDate: new Date(body.startDate) }),
+        ...(body.endDate && { endDate: new Date(body.endDate) }),
+        ...(body.isFree !== undefined && { isFree: body.isFree === "true" }),
+        ...(body.price !== undefined && {
+          price: body.isFree === "true" ? 0 : Number(body.price),
+        }),
+        ...(body.availableSeats && {
+          availableSeats: Number(body.availableSeats),
+        }),
+        ...(body.totalSeats && { totalSeats: Number(body.totalSeats) }),
+        imageUrl,
+      },
+    });
   };
 
   deleteEvent = async (eventId: string, organizerId: string) => {

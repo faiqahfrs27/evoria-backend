@@ -6,7 +6,7 @@ export class LogoutService {
   logout = async (refreshToken?: string) => {
     if (!refreshToken) return;
 
-    await this.prisma.refreshToken.delete({
+    await this.prisma.refreshToken.deleteMany({
       where: { token: refreshToken },
     });
 

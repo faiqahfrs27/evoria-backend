@@ -40,7 +40,7 @@ export class ValidationMiddleware {
         return next(new ApiError(message, 400));
       }
 
-      req.query = dtoInstance as any;
+      _res.locals.query = dtoInstance;
       next();
     };
   };

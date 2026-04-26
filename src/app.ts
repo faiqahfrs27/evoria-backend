@@ -44,6 +44,8 @@ import { globalError, notFoundError } from "./utils/error.js";
 import { DashboardService } from "./modules/dashboard/dashboard.service.js";
 import { DashboardController } from "./modules/dashboard/dashboard.controller.js";
 import { DashboardRouter } from "./modules/dashboard/dashboard.router.js";
+import { startTransactionJobs } from "./jobs/transaction.job.js";
+
 
 export class App {
   app: Express;
@@ -164,8 +166,10 @@ export class App {
 
     const dashboardRouter = new DashboardRouter(
       dashboardController,
+      profileController,
       authMiddleware,
-      validationMiddleware
+      validationMiddleware,
+      uploadMiddleware,
     );
 
     // entry point
@@ -185,10 +189,11 @@ export class App {
   }
 
   start() {
-    const PORT = Number(process.env.PORT) || 8000;
+    const PORT = Number(process.env.PORT);
 
     this.app.listen(PORT, () => {
       console.log(`Server running on port: ${PORT}`);
+      startTransactionJobs();
     });
   }
 }
