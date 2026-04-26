@@ -13,7 +13,7 @@ export class TransactionService {
   constructor(
     private prisma: PrismaClient,
     private cloudinaryService: CloudinaryService,
-    private mailService: MailService
+    private mailService: MailService,
   ) {}
 
   // ── HELPER: Rollback seat, voucher, poin ──────────────────
@@ -54,9 +54,7 @@ export class TransactionService {
             userId: transaction.customerId,
             amount: transaction.pointUsed,
             source: "refund",
-            expiresAt: new Date(
-              Date.now() + 90 * 24 * 60 * 60 * 1000
-            ), // 3 bulan
+            expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 3 bulan
           },
         });
       }
@@ -66,9 +64,15 @@ export class TransactionService {
   // ── 1. CREATE TRANSACTION ─────────────────────────────────
   createTransaction = async (
     customerId: string,
-    body: CreateTransactionDTO
+    body: CreateTransactionDTO,
   ) => {
-    const { eventId, ticketTypeId, voucherId, quantity, pointUsed = "0" } = body;
+    const {
+      eventId,
+      ticketTypeId,
+      voucherId,
+      quantity,
+      pointUsed = "0",
+    } = body;
 
     // 1. Cek event ada
     const event = await this.prisma.event.findUnique({
@@ -132,7 +136,7 @@ export class TransactionService {
     if (pointToUse > totalPoints) {
       throw new ApiError(
         `Not enough points. Your balance: ${totalPoints} points`,
-        400
+        400,
       );
     }
 
@@ -201,7 +205,9 @@ export class TransactionService {
           status: TransactionStatus.WAITING_FOR_PAYMENT,
         },
         include: {
-          event: { select: { id: true, name: true, location: true, startDate: true } },
+          event: {
+            select: { id: true, name: true, location: true, startDate: true },
+          },
           ticketType: true,
           customer: { select: { id: true, name: true, email: true } },
         },
@@ -229,7 +235,7 @@ export class TransactionService {
   uploadPaymentProof = async (
     transactionId: string,
     customerId: string,
-    file: Express.Multer.File
+    file: Express.Multer.File,
   ) => {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
@@ -254,7 +260,10 @@ export class TransactionService {
         where: { id: transactionId },
         data: { status: TransactionStatus.EXPIRED },
       });
-      throw new ApiError("Payment deadline has passed, transaction expired", 400);
+      throw new ApiError(
+        "Payment deadline has passed, transaction expired",
+        400,
+      );
     }
 
     // Upload bukti bayar ke Cloudinary
@@ -303,7 +312,7 @@ export class TransactionService {
     if (transaction.status !== TransactionStatus.WAITING_FOR_PAYMENT) {
       throw new ApiError(
         "Only transactions waiting for payment can be canceled",
-        400
+        400,
       );
     }
 
@@ -331,11 +340,14 @@ export class TransactionService {
   };
 
   // ── 4. GET MY TRANSACTIONS ────────────────────────────────
-  getMyTransactions = async (
-    customerId: string,
-    query: GetTransactionsDTO
-  ) => {
-    const { page = 1, take = 10, sortBy = "createdAt", sortOrder = "desc", status } = query;
+  getMyTransactions = async (customerId: string, query: GetTransactionsDTO) => {
+    const {
+      page = 1,
+      take = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      status,
+    } = query;
 
     const whereClause: Prisma.TransactionWhereInput = { customerId };
     if (status) whereClause.status = status as TransactionStatus;
@@ -359,12 +371,65 @@ export class TransactionService {
     return { data: transactions, meta: { page, take, total } };
   };
 
+  // ── GET TRANSACTION DETAIL ──────────────────────────────
+  getTransactionDetail = async (transactionId: string, customerId: string) => {
+    const transaction = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            location: true,
+            startDate: true,
+            endDate: true,
+            imageUrl: true,
+            organizer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        ticketType: true,
+        voucher: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!transaction) {
+      throw new ApiError("Transaction not found", 404);
+    }
+
+    if (transaction.customerId !== customerId) {
+      throw new ApiError("Forbidden", 403);
+    }
+
+    return transaction;
+  };
+
   // ── 5. ACCEPT TRANSACTION (ORGANIZER) ─────────────────────
   acceptTransaction = async (transactionId: string, organizerId: string) => {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
       include: {
-        event: { select: { organizerId: true, name: true, startDate: true, location: true } },
+        event: {
+          select: {
+            organizerId: true,
+            name: true,
+            startDate: true,
+            location: true,
+          },
+        },
         customer: { select: { name: true, email: true } },
       },
     });
@@ -373,7 +438,9 @@ export class TransactionService {
     if (transaction.event.organizerId !== organizerId) {
       throw new ApiError("Forbidden", 403);
     }
-    if (transaction.status !== TransactionStatus.WAITING_FOR_ADMIN_CONFIRMATION) {
+    if (
+      transaction.status !== TransactionStatus.WAITING_FOR_ADMIN_CONFIRMATION
+    ) {
       throw new ApiError("Transaction is not waiting for confirmation", 400);
     }
 
@@ -413,7 +480,9 @@ export class TransactionService {
     if (transaction.event.organizerId !== organizerId) {
       throw new ApiError("Forbidden", 403);
     }
-    if (transaction.status !== TransactionStatus.WAITING_FOR_ADMIN_CONFIRMATION) {
+    if (
+      transaction.status !== TransactionStatus.WAITING_FOR_ADMIN_CONFIRMATION
+    ) {
       throw new ApiError("Transaction is not waiting for confirmation", 400);
     }
 
@@ -444,9 +513,15 @@ export class TransactionService {
   getEventTransactions = async (
     eventId: string,
     organizerId: string,
-    query: GetTransactionsDTO
+    query: GetTransactionsDTO,
   ) => {
-    const { page = 1, take = 10, sortBy = "createdAt", sortOrder = "desc", status } = query;
+    const {
+      page = 1,
+      take = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      status,
+    } = query;
 
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },

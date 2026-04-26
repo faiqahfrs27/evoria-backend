@@ -13,7 +13,7 @@ export class TransactionRouter {
     private transactionController: TransactionController,
     private authMiddleware: AuthMiddleware,
     private uploadMiddleware: UploadMiddleware,
-    private validationMiddleware: ValidationMiddleware
+    private validationMiddleware: ValidationMiddleware,
   ) {
     this.router = Router();
     this.initRoutes();
@@ -31,7 +31,7 @@ export class TransactionRouter {
       verifyToken(JWT),
       verifyRole([Role.USER]),
       this.validationMiddleware.validateBody(CreateTransactionDTO),
-      this.transactionController.createTransaction
+      this.transactionController.createTransaction,
     );
 
     // GET /transactions/my → lihat transaksi saya
@@ -39,7 +39,7 @@ export class TransactionRouter {
       "/my",
       verifyToken(JWT),
       verifyRole([Role.USER]),
-      this.transactionController.getMyTransactions
+      this.transactionController.getMyTransactions,
     );
 
     // PATCH /transactions/:id/payment-proof → upload bukti bayar
@@ -50,7 +50,7 @@ export class TransactionRouter {
       this.uploadMiddleware
         .upload()
         .fields([{ name: "paymentProof", maxCount: 1 }]),
-      this.transactionController.uploadPaymentProof
+      this.transactionController.uploadPaymentProof,
     );
 
     // PATCH /transactions/:id/cancel → cancel transaksi
@@ -58,7 +58,7 @@ export class TransactionRouter {
       "/:id/cancel",
       verifyToken(JWT),
       verifyRole([Role.USER]),
-      this.transactionController.cancelTransaction
+      this.transactionController.cancelTransaction,
     );
 
     // ── ORGANIZER ───────────────────────────────────────────
@@ -68,7 +68,15 @@ export class TransactionRouter {
       "/event/:eventId",
       verifyToken(JWT),
       verifyRole([Role.ORGANIZER]),
-      this.transactionController.getEventTransactions
+      this.transactionController.getEventTransactions,
+    );
+
+    // GET /transactions/:id → lihat detail satu transaksi
+    this.router.get(
+      "/:id",
+      verifyToken(JWT),
+      verifyRole([Role.USER]),
+      this.transactionController.getTransactionDetail,
     );
 
     // PATCH /transactions/:id/accept → terima transaksi
@@ -76,7 +84,7 @@ export class TransactionRouter {
       "/:id/accept",
       verifyToken(JWT),
       verifyRole([Role.ORGANIZER]),
-      this.transactionController.acceptTransaction
+      this.transactionController.acceptTransaction,
     );
 
     // PATCH /transactions/:id/reject → tolak transaksi
@@ -84,7 +92,7 @@ export class TransactionRouter {
       "/:id/reject",
       verifyToken(JWT),
       verifyRole([Role.ORGANIZER]),
-      this.transactionController.rejectTransaction
+      this.transactionController.rejectTransaction,
     );
   };
 
