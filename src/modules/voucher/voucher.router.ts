@@ -25,7 +25,6 @@ export class VoucherRouter {
       "/",
       this.authMiddleware.verifyToken(JWT_SECRET),
       this.authMiddleware.verifyRole([Role.ORGANIZER]),
-      this.validationMiddleware.validateBody(GetVouchersDTO),
       this.voucherController.getVouchers
     );
 

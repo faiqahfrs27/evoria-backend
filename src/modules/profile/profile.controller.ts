@@ -25,20 +25,58 @@ export class ProfileController {
     }
   };
 
-  updateProfilePic = async (req: Request, res: Response, next: NextFunction) => {
+  updateProfilePic = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const { id } = res.locals.user;
- 
+
       if (!req.file) {
         throw new ApiError("No file uploaded", 400);
       }
- 
+
       const result = await this.profileService.updateProfilePic(id, req.file);
-      res.status(200).json({ message: "Profile picture updated", data: result });
+      res
+        .status(200)
+        .json({ message: "Profile picture updated", data: result });
     } catch (error) {
       next(error);
     }
   };
 
-  changePassword = async (req: Request, res: Response) => {};
+  changePassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = res.locals.user;
+      await this.profileService.changePassword(id, req.body);
+      res.status(200).json({ message: "Password changed successfully" });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+   getMyPoints = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = res.locals.user;
+      const result = await this.profileService.getMyPoints(id);
+      res.status(200).json({ data: result });
+    } catch (err) { next(err); }
+  };
+ 
+  getMyVouchers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = res.locals.user;
+      const result = await this.profileService.getMyVouchers(id);
+      res.status(200).json({ data: result });
+    } catch (err) { next(err); }
+  };
+ 
+  getMyTransactions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = res.locals.user;
+      const result = await this.profileService.getMyTransactions(id);
+      res.status(200).json({ data: result });
+    } catch (err) { next(err); }
+  };
 }

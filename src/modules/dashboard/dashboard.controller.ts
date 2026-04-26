@@ -28,10 +28,7 @@ export class DashboardController {
   getStatistics = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = res.locals.user;
-      const result = await this.dashboardService.getStatistics(
-        id,
-        req.query as any,
-      );
+      const result = await this.dashboardService.getStatistics(id, res.locals.query);
       res.status(200).json({ message: "Statistics fetched", data: result });
     } catch (error) {
       next(error);

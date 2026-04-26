@@ -23,10 +23,10 @@ export class DashboardService {
         startDate: true,
         endDate: true,
         availableSeats: true,
-        totalSeats: true, // ✅ ada di schema
+        totalSeats: true, 
         price: true,
-        isFree: true, // ✅ ada di schema
-        imageUrl: true, // ✅ bukan thumbnail
+        isFree: true, 
+        imageUrl: true, 
         createdAt: true,
         _count: {
           select: { transactions: true },
