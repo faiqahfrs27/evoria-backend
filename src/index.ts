@@ -5,6 +5,8 @@ import { startTransactionJobs } from "./jobs/transaction.job.js";
 
 dotenv.config();
 
+dotenv.config();
+
 const main = () => {
     const app = new App();
     app.start();
