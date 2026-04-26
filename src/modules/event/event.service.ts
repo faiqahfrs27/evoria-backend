@@ -45,7 +45,7 @@ export class EventService {
       whereClause.location = { contains: location, mode: "insensitive" };
     }
 
-  const events = await this.prisma.event.findMany({
+    const events = await this.prisma.event.findMany({
       where: whereClause,
       take: take,
       skip: (page - 1) * take,
@@ -96,6 +96,8 @@ export class EventService {
             name: true,
           },
         },
+        ticketTypes: true,
+        vouchers: true,
       },
     });
 
