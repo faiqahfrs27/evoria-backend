@@ -359,6 +359,52 @@ export class TransactionService {
     return { data: transactions, meta: { page, take, total } };
   };
 
+  // ── GET TRANSACTION DETAIL ──────────────────────────────
+getTransactionDetail = async (transactionId: string, customerId: string) => {
+  const transaction = await this.prisma.transaction.findUnique({
+    where: { id: transactionId },
+    include: {
+      event: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          location: true,
+          startDate: true,
+          endDate: true,
+          imageUrl: true,
+          organizer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      ticketType: true,
+      voucher: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (!transaction) {
+    throw new ApiError("Transaction not found", 404);
+  }
+
+  if (transaction.customerId !== customerId) {
+    throw new ApiError("Forbidden", 403);
+  }
+
+  return transaction;
+};
+
   // ── 5. ACCEPT TRANSACTION (ORGANIZER) ─────────────────────
   acceptTransaction = async (transactionId: string, organizerId: string) => {
     const transaction = await this.prisma.transaction.findUnique({

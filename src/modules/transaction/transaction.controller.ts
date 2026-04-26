@@ -4,12 +4,16 @@ import { TransactionService } from "./transaction.service.js";
 export class TransactionController {
   constructor(private transactionService: TransactionService) {}
 
-  createTransaction = async (req: Request, res: Response, next: NextFunction) => {
+  createTransaction = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const customerId = res.locals.user.id;
       const result = await this.transactionService.createTransaction(
         customerId,
-        req.body
+        req.body,
       );
       res.status(201).json({ message: "Transaction created", data: result });
     } catch (error) {
@@ -17,7 +21,11 @@ export class TransactionController {
     }
   };
 
-  uploadPaymentProof = async (req: Request, res: Response, next: NextFunction) => {
+  uploadPaymentProof = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const customerId = res.locals.user.id;
       const transactionId = req.params.id as string;
@@ -35,7 +43,7 @@ export class TransactionController {
       const result = await this.transactionService.uploadPaymentProof(
         transactionId,
         customerId,
-        paymentProof
+        paymentProof,
       );
       res.status(200).json({ message: "Payment proof uploaded", data: result });
     } catch (error) {
@@ -43,13 +51,17 @@ export class TransactionController {
     }
   };
 
-  cancelTransaction = async (req: Request, res: Response, next: NextFunction) => {
+  cancelTransaction = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const customerId = res.locals.user.id;
       const transactionId = req.params.id as string;
       const result = await this.transactionService.cancelTransaction(
         transactionId,
-        customerId
+        customerId,
       );
       res.status(200).json({ message: "Transaction canceled", data: result });
     } catch (error) {
@@ -57,12 +69,16 @@ export class TransactionController {
     }
   };
 
-  getMyTransactions = async (req: Request, res: Response, next: NextFunction) => {
+  getMyTransactions = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const customerId = res.locals.user.id;
       const result = await this.transactionService.getMyTransactions(
         customerId,
-        req.query as any
+        req.query as any,
       );
       res.status(200).json(result);
     } catch (error) {
@@ -70,13 +86,37 @@ export class TransactionController {
     }
   };
 
-  acceptTransaction = async (req: Request, res: Response, next: NextFunction) => {
+  getTransactionDetail = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const customerId = res.locals.user.id;
+      const transactionId = req.params.id as string;
+
+      const result = await this.transactionService.getTransactionDetail(
+        transactionId,
+        customerId,
+      );
+
+      res.status(200).json({ data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  acceptTransaction = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const organizerId = res.locals.user.id;
       const transactionId = req.params.id as string;
       const result = await this.transactionService.acceptTransaction(
         transactionId,
-        organizerId
+        organizerId,
       );
       res.status(200).json({ message: "Transaction accepted", data: result });
     } catch (error) {
@@ -84,13 +124,17 @@ export class TransactionController {
     }
   };
 
-  rejectTransaction = async (req: Request, res: Response, next: NextFunction) => {
+  rejectTransaction = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const organizerId = res.locals.user.id;
       const transactionId = req.params.id as string;
       const result = await this.transactionService.rejectTransaction(
         transactionId,
-        organizerId
+        organizerId,
       );
       res.status(200).json({ message: "Transaction rejected", data: result });
     } catch (error) {
@@ -98,14 +142,18 @@ export class TransactionController {
     }
   };
 
-  getEventTransactions = async (req: Request, res: Response, next: NextFunction) => {
+  getEventTransactions = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const organizerId = res.locals.user.id;
       const eventId = req.params.eventId as string;
       const result = await this.transactionService.getEventTransactions(
         eventId,
         organizerId,
-        req.query as any
+        req.query as any,
       );
       res.status(200).json(result);
     } catch (error) {
