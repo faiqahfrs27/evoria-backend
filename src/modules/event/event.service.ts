@@ -93,7 +93,10 @@ export class EventService {
       include: {
         organizer: {
           select: {
+            id: true,
             name: true,
+            email: true,
+            profilePic: true,
           },
         },
         ticketTypes: true,
