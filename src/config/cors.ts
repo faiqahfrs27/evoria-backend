@@ -6,5 +6,7 @@ export const corsOptions: CorsOptions = {
     "http://localhost:4173",
     process.env.BASE_URL_FE!,
   ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
