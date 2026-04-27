@@ -23,6 +23,7 @@ model User {
   password               String
   role                   Role                 @default(USER)
   profilePic             String?
+  provider               Provider             @default(CREDENTIALS)
   referralCode           String               @unique @default(uuid())
   referredById           String?              @db.Uuid
   createdAt              DateTime             @default(now())
@@ -225,4 +226,9 @@ enum TransactionStatus {
   REJECTED
   EXPIRED
   CANCELED
+}
+
+enum Provider {
+  CREDENTIALS
+  GOOGLE
 }

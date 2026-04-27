@@ -11,6 +11,8 @@ import { ForgotPasswordController } from "./forgot-password/forgot-password.cont
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
 import { ResetPasswordDTO } from "./dto/reset-password.dto.js";
 import { ResetPasswordController } from "./reset-password/reset-password.controller.js";
+import { GoogleController } from "./google/google.controller.js";
+import { GoogleDTO } from "./dto/google.dto.js";
 
 export class AuthRouter {
   router: Router;
@@ -22,6 +24,7 @@ export class AuthRouter {
     private refreshController: RefreshController,
     private forgotPasswordController: ForgotPasswordController,
     private resetPasswordController: ResetPasswordController,
+    private googleController: GoogleController,
     private validationMiddleware: ValidationMiddleware,
     private authMiddleware: AuthMiddleware,
   ) {
@@ -56,6 +59,12 @@ export class AuthRouter {
       "/reset-password/:token",
       this.validationMiddleware.validateBody(ResetPasswordDTO),
       this.resetPasswordController.resetPassword,
+    );
+
+    this.router.post(
+      "/google",
+      this.validationMiddleware.validateBody(GoogleDTO),
+      this.googleController.google,
     );
   };
 

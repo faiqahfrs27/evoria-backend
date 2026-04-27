@@ -45,6 +45,8 @@ import { DashboardService } from "./modules/dashboard/dashboard.service.js";
 import { DashboardController } from "./modules/dashboard/dashboard.controller.js";
 import { DashboardRouter } from "./modules/dashboard/dashboard.router.js";
 import { startTransactionJobs } from "./jobs/transaction.job.js";
+import { GoogleService } from "./modules/auth/google/google.service.js";
+import { GoogleController } from "./modules/auth/google/google.controller.js";
 
 
 export class App {
@@ -95,6 +97,7 @@ export class App {
     );
     const profileService = new ProfileService(prisma, cloudinaryService);
     const dashboardService = new DashboardService(prisma);
+    const googleService = new GoogleService(prisma);
 
     // Controller
     const registerController = new RegisterController(registerService);
@@ -113,6 +116,7 @@ export class App {
     const transactionController = new TransactionController(transactionService);
     const profileController = new ProfileController(profileService);
     const dashboardController = new DashboardController(dashboardService, transactionService);
+    const googleController = new GoogleController(googleService);
 
     // Middlewares
     const authMiddleware = new AuthMiddleware();
@@ -127,6 +131,7 @@ export class App {
       refreshController,
       forgotPasswordController,
       resetPasswordController,
+      googleController,
       validationMiddleware,
       authMiddleware,
     );
