@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/modules/mail/templates dist/modules/mail/templates",
     "start": "node dist/index.js",
     "dev": "tsx --watch src/index.ts",
     "prisma:seed": "tsx prisma/seed.ts"
